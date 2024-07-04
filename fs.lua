@@ -1,4 +1,4 @@
-local VERSION = "1.4"
+local VERSION = "1.5"
 local admins = {
   ["Mckeydown#0000"] = 10,
   ["Lays#1146"] = 10,
@@ -34,7 +34,8 @@ local arrowEnabled = {}
 local arrowAllowTime = {}
 local deathPosition = {}
 local colorTarget = {}
-local participantsColor = 0xA353E0
+local participantsColor = 0xffe249
+local participantOutColor = 0xCB546B
 local defaultGravity, defaultWind, mapGravity, mapWind
 local defaultFreeze
 local currentTheme = 'TBD'
@@ -145,7 +146,7 @@ local function multiTargetCall(targetName, fnc, ...)
     return
   end
 
-  if multi == 'participants' then
+  if multi == 'participants' or multi == 'in' then
     for targetName, yes in next, participants do
       if yes then
         fnc(targetName, ...)
@@ -325,17 +326,21 @@ commands.size = function(playerName, args)
 end
 
 commands.color = function(playerName, args)
+  local target = args[1]
   local color = args[2] and tonumber(args[2], 16)
 
   if color then
-    if args[1] == 'participants' then
+    if target == 'participants' or target == 'in' then
       participantsColor = color
+    elseif target == 'out' then
+      participantOutColor = color
     end
 
-    multiTargetCall(args[1], tfm.exec.setNameColor, color)
+    multiTargetCall(target, tfm.exec.setNameColor, color)
   else
-    colorTarget[playerName] = args[1] or playerName
+    colorTarget[playerName] = target or playerName
     ui.showColorPicker(444, playerName, 0, "Pick a color for name color:")
+    return true
   end
 end
 
@@ -775,7 +780,7 @@ local function updateParticipant(playerName, status)
     if status then
       tfm.exec.setNameColor(playerName, participantsColor)
     else
-      tfm.exec.setNameColor(playerName, 0)
+      tfm.exec.setNameColor(playerName, participantOutColor)
     end
   end
 end
@@ -973,11 +978,16 @@ function eventColorPicked(colorPickerId, playerName, color)
   end
 
   if color ~= -1 then
-    if colorTarget[playerName] == 'participants' then
+    local target = colorTarget[playerName]
+
+    if target == 'participants' or target == 'in' then
       participantsColor = color
+    elseif target == 'out' then
+      participantOutColor = color
     end
 
-    multiTargetCall(colorTarget[playerName], tfm.exec.setNameColor, color)
+    multiTargetCall(target, tfm.exec.setNameColor, color)
+    announceAdmins(("<V>[%s] <BL>!color %s %6x"):format(playerName, target, color))
   end
 
   colorTarget[playerName] = nil
