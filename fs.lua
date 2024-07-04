@@ -1,4 +1,4 @@
-local VERSION = "1.25"
+local VERSION = "1.26"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -524,6 +524,7 @@ commands.newtheme = function(playerName, args)
   end
 
   updateThemeUI()
+  sendModuleMessage('New Theme: <J>' .. currentTheme, nil)
 end
 
 commands.theme = function(playerName, args)
