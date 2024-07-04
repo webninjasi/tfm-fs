@@ -1,4 +1,4 @@
-local VERSION = "1.5"
+local VERSION = "1.6"
 local admins = {
   ["Mckeydown#0000"] = 10,
   ["Lays#1146"] = 10,
@@ -455,8 +455,10 @@ commands.t = function(playerName, args)
   announceAdmins(("<N2>• <b>[%s]</b> %s"):format(playerName, args[-1]))
   return true
 end
+commands.c = commands.t
+commands.a = commands.t
 
-commands.s = function(playerName, args)
+commands.announce = function(playerName, args)
   if not args[1] then
     return
   end
