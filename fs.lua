@@ -1,4 +1,4 @@
-local VERSION = "1.2"
+local VERSION = "1.3"
 local admins = {
   ["Mckeydown#0000"] = 10,
   ["Lays#1146"] = 10,
@@ -23,6 +23,7 @@ local settings = {
 }
 
 local mapName
+local roomPlayers = {}
 local bans = {}
 local participants = {}
 local tpTarget = {}
@@ -69,6 +70,8 @@ local function sendModuleMessage(text, playerName)
 end
 
 local function initPlayer(playerName)
+  roomPlayers[playerName] = true
+
   system.bindMouse(playerName, true)
   tfm.exec.bindKeyboard(playerName, 16, true, true)
   tfm.exec.bindKeyboard(playerName, 16, false, true)
@@ -118,14 +121,14 @@ local function multiTargetCall(targetName, fnc, ...)
 
   local multi = targetName:lower()
   if multi == 'all' or multi == 'room' then
-    for targetName in next, tfm.get.room.playerList do
+    for targetName in next, roomPlayers do
       fnc(targetName, ...)
     end
     return
   end
 
   if multi == 'admins' then
-    for targetName in next, tfm.get.room.playerList do
+    for targetName in next, roomPlayers do
       if admins[targetName] then
         fnc(targetName, ...)
       end
@@ -134,7 +137,7 @@ local function multiTargetCall(targetName, fnc, ...)
   end
 
   if multi == 'players' then
-    for targetName in next, tfm.get.room.playerList do
+    for targetName in next, roomPlayers do
       if not admins[targetName] then
         fnc(targetName, ...)
       end
@@ -178,7 +181,7 @@ end
 
 local function announceAdmins(message)
   for adminName in next, admins do
-    if tfm.get.room.playerList[adminName] then
+    if roomPlayers[adminName] then
       tfm.exec.chatMessage(message, adminName)
     end
   end
@@ -231,7 +234,7 @@ end
 commands.participants = function(playerName, args)
   local inRoom, outRoom = {}, {}
   for name in next, participants do
-    if tfm.get.room.playerList[name] then
+    if roomPlayers[name] then
       inRoom[1 + #inRoom] = name
     else
       outRoom[1 + #outRoom] = name
@@ -250,7 +253,7 @@ end
 commands.admins = function(playerName, args)
   local list = {}
   for name, level in next, admins do
-    if level < 7 or tfm.get.room.playerList[name] then
+    if level < 7 or roomPlayers[name] then
       list[1 + #list] = name
     end
   end
@@ -395,7 +398,6 @@ commands.npc = function(playerName, args)
 
   if not args[1] then
     createNPC(playerName)
-    announceAdmins(("<V>[%s] <BL>!npc"):format(playerName))
     return
   end
 
@@ -485,7 +487,7 @@ commands.admin = function(playerName, args)
   end
 
   if targetName == "all" or targetName == "room" then
-    for targetName in next, tfm.get.room.playerList do
+    for targetName in next, roomPlayers do
       if not admins[targetName] then
         admins[targetName] = 5
       end
@@ -523,7 +525,7 @@ commands.unadmin = function(playerName, args)
   end
 
   if targetName == "room" then
-    for targetName in next, tfm.get.room.playerList do
+    for targetName in next, roomPlayers do
       if admins[targetName] and admins[targetName] < admins[playerName] then
         admins[targetName] = nil
       end
@@ -859,7 +861,7 @@ function eventNewGame()
     ui.setMapName(mapName)
   end
 
-  for playerName in next, tfm.get.room.playerList do
+  for playerName in next, roomPlayers do
     if bans[playerName] then
       tfm.exec.killPlayer(playerName)
     end
@@ -878,6 +880,8 @@ function eventLoop(elapsedTime, remainingTime)
 end
 
 function eventNewPlayer(playerName)
+  initPlayer(playerName)
+
   if mapName then
     ui.setMapName(mapName)
   end
@@ -897,11 +901,10 @@ function eventNewPlayer(playerName)
   for targetName, look in next, playerNPC do
     createNPC(targetName, look)
   end
-
-  initPlayer(playerName)
 end
 
 function eventPlayerLeft(playerName)
+  roomPlayers[playerName] = nil
   tpTarget[playerName] = nil
   arrowEnabled[playerName] = nil
   colorTarget[playerName] = nil
