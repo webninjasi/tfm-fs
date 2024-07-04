@@ -1,4 +1,4 @@
-local VERSION = "1.21"
+local VERSION = "1.22"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -424,7 +424,7 @@ local function createNPC(playerName, look)
     return
   end
 
-  if look and look:find('.') == 1 then
+  if look and look:find('%.') == 1 then
     look = ((playerNPC[playerName] or '') .. look:gsub('^%.+', '')):sub(1, 4096)
   else
     look = look or player.look
