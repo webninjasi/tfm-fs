@@ -1,4 +1,4 @@
-local VERSION = "1.1"
+local VERSION = "1.2"
 local admins = {
   ["Mckeydown#0000"] = 10,
   ["Lays#1146"] = 10,
@@ -18,10 +18,12 @@ local settings = {
   allow_npc = false,
   allow_skills = true,
   auto_cp = true,
+  allow_join = true,
 }
 
 local mapName
 local bans = {}
+local participants = {}
 local tpTarget = {}
 local holdingShift = {}
 local canTeleport = {}
@@ -138,6 +140,15 @@ local function multiTargetCall(targetName, fnc, ...)
     return
   end
 
+  if multi == 'participants' then
+    for targetName, yes in next, participants do
+      if yes then
+        fnc(targetName, ...)
+      end
+    end
+    return
+  end
+
   fnc(targetName, ...)
 end
 
@@ -180,6 +191,9 @@ local allowCommandForEveryone = {
   ["admins"] = true,
   ["theme"] = true,
   ["npc"] = true,
+  ["join"] = true,
+  ["leave"] = true,
+  ["participants"] = true,
 }
 local commands = {}
 
@@ -210,6 +224,25 @@ commands.commands = function(playerName, args)
 
   table.sort(list)
   sendModuleMessage('Available commands: <BL>' .. table.concat(list, ', '), playerName)
+end
+
+commands.participants = function(playerName, args)
+  local inRoom, outRoom = {}, {}
+  for name in next, participants do
+    if tfm.get.room.playerList[name] then
+      inRoom[1 + #inRoom] = name
+    else
+      outRoom[1 + #outRoom] = name
+    end
+  end
+  sendModuleMessage("participants:", playerName)
+  for i=1, #inRoom, 10 do
+    tfm.exec.chatMessage("<V>" .. table.concat(inRoom, ' ', i, math.min(#inRoom, i+9)), playerName)
+  end
+  for i=1, #outRoom, 10 do
+    tfm.exec.chatMessage("<G>" .. table.concat(outRoom, ' ', i, math.min(#outRoom, i+9)), playerName)
+  end
+  return true
 end
 
 commands.admins = function(playerName, args)
@@ -713,6 +746,70 @@ commands.settings = function(playerName, args)
   sendModuleMessage(key ..' = ' .. (value and 'yes' or 'no'), playerName)
   disableStuff()
   updateThemeUI()
+end
+
+commands.join = function(playerName, args)
+  if not settings.allow_join or participants[playerName] ~= nil then
+    return
+  end
+
+  participants[playerName] = true
+  sendModuleMessage('<V>' .. playerName .. ' <N>has joined the show.', nil)
+end
+
+commands.leave = function(playerName, args)
+  if not participants[playerName] then
+    return
+  end
+
+  participants[playerName] = nil
+  sendModuleMessage('<V>' .. playerName .. ' <N>has left the show.', nil)
+end
+
+local function updateParticipant(playerName, status)
+  participants[playerName] = status
+end
+
+commands.add = function(playerName, args)
+  multiTargetCall(args[1], updateParticipant, true)
+end
+
+commands.remove = function(playerName, args)
+  multiTargetCall(args[1], updateParticipant, false)
+end
+
+commands.group = function(playerName, args)
+  local number = tonumber(args[1])
+  if not number then
+    return
+  end
+
+  local list = {}
+  for name in next, participants do
+    list[1 + #list] = name
+  end
+
+  local groups = {}
+  local count = math.ceil(#list / number)
+  local index, group
+  for i=1, count do
+    group = {}
+    groups[i] = group
+    for j=1, number do
+      if #list == 0 then
+        break
+      end
+      index = math.random(#list)
+      group[j] = list[index]
+      list[index] = list[#list]
+      list[#list] = nil
+    end
+  end
+
+  sendModuleMessage(('Randomized groups of %s:'):format(number), nil)
+  for i=1, #groups do
+    tfm.exec.chatMessage("<V>" .. table.concat(groups[i], ' '), nil)
+  end
 end
 
 
