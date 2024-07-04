@@ -1,4 +1,4 @@
-local VERSION = "1.9"
+local VERSION = "1.10"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -266,11 +266,13 @@ end
 
 commands.participants = function(playerName, args)
   local inRoom, outRoom = {}, {}
-  for name in next, participants do
-    if roomPlayers[name] then
-      inRoom[1 + #inRoom] = name
-    else
-      outRoom[1 + #outRoom] = name
+  for name, yes in next, participants do
+    if yes then
+      if roomPlayers[name] then
+        inRoom[1 + #inRoom] = name
+      else
+        outRoom[1 + #outRoom] = name
+      end
     end
   end
   sendModuleMessage("participants:", playerName)
@@ -860,8 +862,10 @@ commands.group = function(playerName, args)
   end
 
   local list = {}
-  for name in next, participants do
-    list[1 + #list] = name
+  for name, yes in next, participants do
+    if yes then
+      list[1 + #list] = name
+    end
   end
 
   local groups = {}
