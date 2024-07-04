@@ -19,6 +19,7 @@ local settings = {
   allow_skills = true,
   auto_cp = true,
   allow_join = true,
+  auto_color = true,
 }
 
 local mapName
@@ -32,6 +33,7 @@ local arrowEnabled = {}
 local arrowAllowTime = {}
 local deathPosition = {}
 local colorTarget = {}
+local participantsColor = 0xA353E0
 local defaultGravity, defaultWind, mapGravity, mapWind
 local defaultFreeze
 local currentTheme = 'TBD'
@@ -323,9 +325,13 @@ commands.color = function(playerName, args)
   local color = args[2] and tonumber(args[2], 16)
 
   if color then
+    if args[1] == 'participants' then
+      participantsColor = color
+    end
+
     multiTargetCall(args[1], tfm.exec.setNameColor, color)
-  elseif args[1] then
-    colorTarget[playerName] = args[1]
+  else
+    colorTarget[playerName] = args[1] or playerName
     ui.showColorPicker(444, playerName, 0, "Pick a color for name color:")
   end
 end
@@ -748,12 +754,24 @@ commands.settings = function(playerName, args)
   updateThemeUI()
 end
 
+local function updateParticipant(playerName, status)
+  participants[playerName] = status
+
+  if settings.auto_color then
+    if status then
+      tfm.exec.setNameColor(playerName, participantsColor)
+    else
+      tfm.exec.setNameColor(playerName, 0)
+    end
+  end
+end
+
 commands.join = function(playerName, args)
   if not settings.allow_join or participants[playerName] ~= nil then
     return
   end
 
-  participants[playerName] = true
+  updateParticipant(playerName, true)
   sendModuleMessage('<V>' .. playerName .. ' <N>has joined the show.', nil)
 end
 
@@ -762,12 +780,8 @@ commands.leave = function(playerName, args)
     return
   end
 
-  participants[playerName] = nil
+  updateParticipant(playerName, nil)
   sendModuleMessage('<V>' .. playerName .. ' <N>has left the show.', nil)
-end
-
-local function updateParticipant(playerName, status)
-  participants[playerName] = status
 end
 
 commands.add = function(playerName, args)
@@ -898,6 +912,10 @@ function eventPlayerRespawn(playerName)
     tfm.exec.freezePlayer(playerName, true, true)
   end
 
+  if participants[playerName] then
+    tfm.exec.setNameColor(playerName, participantsColor)
+  end
+
   if settings.auto_cp then
     local death = deathPosition[playerName]
     
@@ -937,7 +955,15 @@ function eventColorPicked(colorPickerId, playerName, color)
     return
   end
 
-  if color then
+  if colorPickerId ~= 444 then
+    return
+  end
+
+  if color ~= -1 then
+    if colorTarget[playerName] == 'participants' then
+      participantsColor = color
+    end
+
     multiTargetCall(colorTarget[playerName], tfm.exec.setNameColor, color)
   end
 
