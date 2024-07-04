@@ -1,4 +1,4 @@
-local VERSION = "1.6"
+local VERSION = "1.7"
 local admins = {
   ["Mckeydown#0000"] = 10,
   ["Lays#1146"] = 10,
@@ -20,6 +20,7 @@ local settings = {
   auto_cp = true,
   allow_join = true,
   auto_color = true,
+  time_warning = true,
 }
 
 local mapName
@@ -39,8 +40,10 @@ local participantOutColor = 0xCB546B
 local defaultGravity, defaultWind, mapGravity, mapWind
 local defaultFreeze
 local currentTheme = 'TBD'
+local timeWarningMessage = 'There is less than 1 minute left...'
 local timeupMessage = 'Time is up!'
 local timeupMessageShown
+local lastMinuteWarningShown
 
 local lastMapCode
 local loadMapCode, loadMapReversed
@@ -315,6 +318,10 @@ commands.time = function(playerName, args)
     return
   end
 
+  if time > 60 then
+    lastMinuteWarningShown = false
+  end
+
   timeupMessageShown = false
   tfm.exec.setGameTime(time, true)
 end
@@ -426,6 +433,12 @@ end
 commands.timeup = function(playerName, args)
   if args[1] then
     timeupMessage = args[-1]
+  end
+end
+
+commands.timewarning = function(playerName, args)
+  if args[1] then
+    timeWarningMessage = args[-1]
   end
 end
 
@@ -851,6 +864,7 @@ function eventNewGame()
   disableStuff()
 
   timeupMessageShown = false
+  lastMinuteWarningShown = false
   playerNPC = {}
   deathPosition = {}
 
@@ -890,7 +904,10 @@ function eventLoop(elapsedTime, remainingTime)
     tfm.exec.newGame(loadMapCode, loadMapReversed)
   end
 
-  if remainingTime < 0 and settings.timeup_msg and not timeupMessageShown then
+  if remainingTime < 60000 and remainingTime > 50000 and settings.time_warning and not lastMinuteWarningShown then
+    lastMinuteWarningShown = true
+    sendModuleMessage('<R>' .. timeWarningMessage, nil)
+  elseif remainingTime < 0 and settings.timeup_msg and not timeupMessageShown then
     timeupMessageShown = true
     sendModuleMessage('<R>' .. timeupMessage, nil)
   end
