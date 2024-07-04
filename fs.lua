@@ -1,4 +1,4 @@
-local VERSION = "1.24"
+local VERSION = "1.25"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -246,6 +246,10 @@ commands.help = function(playerName, args)
 
   if not admins[playerName] then
     eventChatCommand(playerName, 'room onlymine')
+
+    if settings.allow_join then
+      tfm.exec.chatMessage("<N>If you are here for a fashion show, type <BL>!join <N>to participate.", playerName)
+    end
   end
 end
 
