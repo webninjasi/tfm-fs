@@ -1,4 +1,4 @@
-local VERSION = "1.17"
+local VERSION = "1.18"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -442,8 +442,8 @@ commands.copynpc = function(playerName, args)
   multiTargetCall(args[1] or playerName, createNPC)
 end
 commands.npc = function(playerName, args)
-  if not admins[playerName] and not settings.allow_npc then
-    sendModuleMessage('<R>Creating NPC is disallowed', playerName)
+  if not admins[playerName] and (not settings.allow_npc or not participants[playerName]) then
+    sendModuleMessage('<R>You are not allowed to create NPC', playerName)
     return
   end
 
@@ -802,26 +802,6 @@ commands.win = function(playerName, args)
   multiTargetCall(args[1] or playerName, playerVictory)
 end
 
-local function banPlayer(targetName)
-  bans[targetName] = true
-  tfm.exec.killPlayer(targetName)
-end
-commands.ban = function(playerName, args)
-  multiTargetCall(args[1], banPlayer)
-end
-
-local function unbanPlayer(targetName)
-  bans[targetName] = nil
-  tfm.exec.respawnPlayer(targetName)
-end
-commands.unban = function(playerName, args)
-  if args[1] == "all" then
-    bans = {}
-  end
-
-  multiTargetCall(args[1], unbanPlayer)
-end
-
 commands.sy = function(playerName, args)
   tfm.exec.setPlayerSync(args[1])
 end
@@ -884,6 +864,10 @@ local function updateParticipant(playerName, status)
     return
   end
 
+  if status == false and not participants[playerName] and not roomPlayers[playerName] then
+    return
+  end
+
   participants[playerName] = status
 
   if status then
@@ -901,6 +885,29 @@ local function updateParticipant(playerName, status)
       tfm.exec.setNameColor(playerName, participantOutColor)
     end
   end
+end
+
+local function banPlayer(targetName, yes)
+  bans[targetName] = yes
+
+  if yes then
+    updateParticipant(targetName, false)
+    tfm.exec.killPlayer(targetName)
+  elseif settings.auto_respawn then
+    tfm.exec.respawnPlayer(targetName)
+  end
+end
+
+commands.ban = function(playerName, args)
+  multiTargetCall(args[1], banPlayer, true)
+end
+
+commands.unban = function(playerName, args)
+  if args[1] == "all" then
+    bans = {}
+  end
+
+  multiTargetCall(args[1], banPlayer, nil)
 end
 
 commands.join = function(playerName, args)
