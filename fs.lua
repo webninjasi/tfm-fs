@@ -1,4 +1,5 @@
-local VERSION = "1.7"
+local VERSION = "1.8"
+local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
   ["Lays#1146"] = 10,
@@ -203,11 +204,30 @@ local allowCommandForEveryone = {
   ["join"] = true,
   ["leave"] = true,
   ["participants"] = true,
+  ["room"] = true,
 }
 local commands = {}
 
+commands.room = function(playerName, args)
+  sendModuleMessage("You can create your room by typing <BL>/room " .. MODULE_ROOM:format(playerName), playerName)
+
+  if args[1] ~= 'onlymine' then
+    local roomName = tfm.get.room.name
+
+    if roomName:sub(1, 1) ~= '@' and roomName:sub(1, 1) ~= '*' then
+      roomName = ('%s <J>(%s)'):format(roomName, tfm.get.room.community)
+    end
+
+    sendModuleMessage("You are currently in <BL>/room " .. roomName, playerName)
+  end
+end
+
 commands.help = function(playerName, args)
   tfm.exec.chatMessage("<N>This is a small utility module made for fashion shows. You can type <BL>!commands <N>to see available commands.", playerName)
+
+  if not admins[playerName] then
+    eventChatCommand(playerName, 'room onlymine')
+  end
 end
 
 commands.mapinfo = function(playerName, args)
