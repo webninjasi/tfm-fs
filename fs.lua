@@ -1,4 +1,4 @@
-local VERSION = "1.16"
+local VERSION = "1.17"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -535,7 +535,6 @@ commands.lock = function(playerName, args)
   local limit = math.min(math.max(tonumber(args[1]) or 50, 1), 100)
   tfm.exec.setRoomMaxPlayers(limit)
   sendModuleMessage('Room has been locked to ' .. limit .. ' mice.', nil)
-  return true
 end
 
 commands.pw = function(playerName, args)
