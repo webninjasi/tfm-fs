@@ -1,4 +1,4 @@
-local VERSION = "1.15"
+local VERSION = "1.16"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -26,6 +26,7 @@ local settings = {
 }
 
 local mapName
+local backgroundColor
 local roomPlayers = {}
 local bans = {}
 local participants = {}
@@ -983,6 +984,11 @@ commands.group = function(playerName, args)
   end
 end
 
+commands.bgcolor = function(playerName, args)
+  backgroundColor = args[1] and ("#" .. args[1]) or nil
+  ui.setBackgroundColor(backgroundColor)
+end
+
 
 function eventNewGame()
   -- sometimes it bugs so we refresh it every round
@@ -1009,6 +1015,9 @@ function eventNewGame()
         local wind, gravity = properties:match(' G="(.-),(.-)"')
         defaultWind = tonumber(wind) or 0
         defaultGravity = tonumber(gravity) or 10
+
+        backgroundColor = properties:match(' bgcolor="(.-)"') or backgroundColor
+        ui.setBackgroundColor(backgroundColor)
       end
     end
   end
@@ -1040,6 +1049,10 @@ end
 
 function eventNewPlayer(playerName)
   initPlayer(playerName)
+
+  if backgroundColor then
+    ui.setBackgroundColor(backgroundColor)
+  end
 
   if mapName then
     ui.setMapName(mapName)
