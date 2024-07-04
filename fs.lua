@@ -1,4 +1,4 @@
-local VERSION = "1.12"
+local VERSION = "1.13"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -1189,8 +1189,7 @@ function eventChatCommand(playerName, command)
   if cmd then
     ok, err = pcall(cmd, playerName, args)
     if not ok and err then
-      print(("Error on command %s: %s"):format(tostring(args[0]), tostring(err)))
-      sendModuleMessage("An error occured.", playerName)
+      sendModuleMessage(("<R>Module error on command !%s: <BL>%s"):format(args[0], tostring(err)), playerName)
     end
 
     if not allowCommandForEveryone[args[0]] and (ok and not err) then
@@ -1199,6 +1198,17 @@ function eventChatCommand(playerName, command)
   end
 end
 
+
+for eventName, eventFunc in next, _G do
+  if eventName:find('event') == 1 then
+    _G[eventName] = function(...)
+      ok, err = pcall(eventFunc, ...)
+      if not ok then
+        announceAdmins(("<R>Module error on %s: <BL>%s"):format(eventName, tostring(err)))
+      end
+    end
+  end
+end
 
 for playerName in next, tfm.get.room.playerList do
   initPlayer(playerName)
