@@ -1,4 +1,4 @@
-local VERSION = "1.3"
+local VERSION = "1.4"
 local admins = {
   ["Mckeydown#0000"] = 10,
   ["Lays#1146"] = 10,
@@ -757,7 +757,19 @@ commands.settings = function(playerName, args)
 end
 
 local function updateParticipant(playerName, status)
+  if participants[playerName] == status then
+    return
+  end
+
   participants[playerName] = status
+
+  if status then
+    sendModuleMessage('<V>' .. playerName .. ' <N>has joined the show.', nil)
+  elseif status == false then
+    sendModuleMessage('<V>' .. playerName .. ' <N>has been removed from the show.', nil)
+  else
+    sendModuleMessage('<V>' .. playerName .. ' <N>has left the show.', nil)
+  end
 
   if settings.auto_color then
     if status then
@@ -774,7 +786,6 @@ commands.join = function(playerName, args)
   end
 
   updateParticipant(playerName, true)
-  sendModuleMessage('<V>' .. playerName .. ' <N>has joined the show.', nil)
 end
 
 commands.leave = function(playerName, args)
@@ -783,7 +794,6 @@ commands.leave = function(playerName, args)
   end
 
   updateParticipant(playerName, nil)
-  sendModuleMessage('<V>' .. playerName .. ' <N>has left the show.', nil)
 end
 
 commands.add = function(playerName, args)
