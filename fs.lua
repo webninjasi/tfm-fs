@@ -1,4 +1,4 @@
-local VERSION = "1.19"
+local VERSION = "1.20"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -424,7 +424,12 @@ local function createNPC(playerName, look)
     return
   end
 
-  look = look or player.look
+  if look and look:find('.') == 1 then
+    look = ((playerNPC[playerName] or '') .. look:gsub('^%.+', '')):sub(1, 4096)
+  else
+    look = look or player.look
+  end
+
   playerNPC[playerName] = look
   tfm.exec.addNPC(playerName, {
     title = player.title,
