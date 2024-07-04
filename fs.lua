@@ -250,7 +250,7 @@ commands.mapinfo = function(playerName, args)
 end
 
 commands.version = function(playerName, args)
-  sendModuleMessage("fs v" .. VERSION, playerName)
+  sendModuleMessage("fs v" .. VERSION .. ' ~ Lays#1146', playerName)
 end
 
 commands.commands = function(playerName, args)
