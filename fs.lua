@@ -1,4 +1,4 @@
-local VERSION = "1.22"
+local VERSION = "1.23"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -1012,7 +1012,10 @@ function eventNewGame()
   timeupMessageShown = false
   lastMinuteWarningShown = false
   playerNPC = {}
-  deathPosition = {}
+
+  if lastMapCode ~= tfm.get.room.currentMap then
+    deathPosition = {}
+  end
 
   local info = tfm.get.room.xmlMapInfo
   if info and info.xml then
