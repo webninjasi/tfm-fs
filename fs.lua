@@ -1,4 +1,4 @@
-local VERSION = "1.10"
+local VERSION = "1.11"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -852,6 +852,19 @@ commands.add = function(playerName, args)
 end
 
 commands.remove = function(playerName, args)
+  if args[1] == "all" then
+    participants = {}
+    sendModuleMessage('<N>Participant list has been cleared.', nil)
+
+    if settings.auto_color then
+      for name in next, roomPlayers do
+        tfm.exec.setNameColor(playerName, participantOutColor)
+      end
+    end
+
+    return
+  end
+
   multiTargetCall(args[1], updateParticipant, false)
 end
 
