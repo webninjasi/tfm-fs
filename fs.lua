@@ -1,4 +1,4 @@
-local VERSION = "1.20"
+local VERSION = "1.21"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -716,7 +716,7 @@ commands.tpp = function(playerName, args)
   end
 
   local function moveToTarget(sourceName)
-    tfm.exec.movePlayer(sourceName, destName.x, destName.y)
+    tfm.exec.movePlayer(sourceName, destPlayer.x, destPlayer.y)
   end
 
   multiTargetCall(args[1], moveToTarget)
