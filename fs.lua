@@ -1,4 +1,4 @@
-local VERSION = "1.18"
+local VERSION = "1.19"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -23,6 +23,7 @@ local settings = {
   allow_join = true,
   auto_color = true,
   time_warning = true,
+  log_npc = false,
 }
 
 local mapName
@@ -469,7 +470,10 @@ commands.npc = function(playerName, args)
   end
 
   createNPC(playerName, look)
-  announceAdmins(("<V>[%s] <BL>!npc %s"):format(playerName, args[-1]))
+
+  if settings.log_npc then
+    announceAdmins(("<V>[%s] <BL>!npc %s"):format(playerName, args[-1]))
+  end
 end
 
 commands.timeup = function(playerName, args)
