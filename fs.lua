@@ -1,4 +1,4 @@
-local VERSION = "1.13"
+local VERSION = "1.14"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -14,7 +14,7 @@ local settings = {
   throwables = false,
   auto_respawn = true,
   timeup_msg = true,
-  theme_ui = false,
+  --theme_ui = false,
   mapname_theme = true,
   allow_npc = false,
   allow_skills = true,
