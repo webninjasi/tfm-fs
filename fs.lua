@@ -1,4 +1,4 @@
-local VERSION = "1.23"
+local VERSION = "1.24"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -35,6 +35,7 @@ local tpTarget = {}
 local holdingShift = {}
 local canTeleport = {}
 local playerNPC = {}
+local playerNPCPos = {}
 local arrowEnabled = {}
 local arrowAllowTime = {}
 local deathPosition = {}
@@ -412,13 +413,14 @@ local function removeNPC(playerName)
   end
 
   playerNPC[playerName] = nil
+  playerNPCPos[playerName] = nil
   tfm.exec.addNPC(playerName, {
     look = '-1;',
     x = -10000,
     y = -10000,
   })
 end
-local function createNPC(playerName, look)
+local function createNPC(playerName, look, keepPos)
   local player = tfm.get.room.playerList[playerName]
   if not player then
     return
@@ -430,12 +432,18 @@ local function createNPC(playerName, look)
     look = look or player.look
   end
 
+  local pos = keepPos and playerNPCPos[playerName] or {
+    x = player.x,
+    y = player.y,
+  }
+
   playerNPC[playerName] = look
+  playerNPCPos[playerName] = pos
   tfm.exec.addNPC(playerName, {
     title = player.title,
     look = look,
-    x = player.x,
-    y = player.y,
+    x = pos.x,
+    y = pos.y,
     female = player.gender == 0,
     lookLeft = not player.isFacingRight,
     lookAtPlayer = true,
@@ -1012,6 +1020,7 @@ function eventNewGame()
   timeupMessageShown = false
   lastMinuteWarningShown = false
   playerNPC = {}
+  playerNPCPos = {}
 
   if lastMapCode ~= tfm.get.room.currentMap then
     deathPosition = {}
@@ -1089,7 +1098,7 @@ function eventNewPlayer(playerName)
   end
 
   for targetName, look in next, playerNPC do
-    createNPC(targetName, look)
+    createNPC(targetName, look, true)
   end
 end
 
