@@ -1,4 +1,4 @@
-local VERSION = "1.11"
+local VERSION = "1.12"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -201,6 +201,12 @@ local function announceAdmins(message)
   end
 end
 
+local function chatMessageList(playerName, list, max, pre)
+  for i=1, #list, max do
+    tfm.exec.chatMessage(pre .. table.concat(list, ' ', i, math.min(#list, i + max - 1)), playerName)
+  end
+end
+
 
 local allowCommandForEveryone = {
   ["version"] = true,
@@ -218,7 +224,7 @@ local allowCommandForEveryone = {
 local commands = {}
 
 commands.room = function(playerName, args)
-  sendModuleMessage("You can create your room by typing <BL>/room " .. MODULE_ROOM:format(playerName), playerName)
+  sendModuleMessage("You can create your room by typing\n<BL>/room " .. MODULE_ROOM:format(playerName), playerName)
 
   if args[1] ~= 'onlymine' then
     local roomName = tfm.get.room.name
@@ -227,7 +233,7 @@ commands.room = function(playerName, args)
       roomName = ('%s <J>(%s)'):format(roomName, tfm.get.room.community)
     end
 
-    sendModuleMessage("You are currently in <BL>/room " .. roomName, playerName)
+    sendModuleMessage("You are currently in\n<BL>/room " .. roomName, playerName)
   end
 end
 
@@ -262,10 +268,11 @@ commands.commands = function(playerName, args)
 
   table.sort(list)
   sendModuleMessage('Available commands: <BL>' .. table.concat(list, ', '), playerName)
+  sendModuleMessage('You can use the following targets in most of the commands: <BL>all room admins players out in/participants', playerName)
 end
 
 commands.participants = function(playerName, args)
-  local inRoom, outRoom = {}, {}
+  local inRoom, outRoom, removed = {}, {}, {}
   for name, yes in next, participants do
     if yes then
       if roomPlayers[name] then
@@ -273,15 +280,14 @@ commands.participants = function(playerName, args)
       else
         outRoom[1 + #outRoom] = name
       end
+    else
+      removed[1 + #removed] = name
     end
   end
-  sendModuleMessage("participants:", playerName)
-  for i=1, #inRoom, 10 do
-    tfm.exec.chatMessage("<V>" .. table.concat(inRoom, ' ', i, math.min(#inRoom, i+9)), playerName)
-  end
-  for i=1, #outRoom, 10 do
-    tfm.exec.chatMessage("<G>" .. table.concat(outRoom, ' ', i, math.min(#outRoom, i+9)), playerName)
-  end
+  sendModuleMessage("Participants:", playerName)
+  chatMessageList(playerName, inRoom, 10, '<V>')
+  chatMessageList(playerName, outRoom, 10, '<G>')
+  chatMessageList(playerName, removed, 10, '<R>')
   return true
 end
 
@@ -292,10 +298,8 @@ commands.admins = function(playerName, args)
       list[1 + #list] = name
     end
   end
-  sendModuleMessage("admins:", playerName)
-  for i=1, #list, 10 do
-    tfm.exec.chatMessage("<V>" .. table.concat(list, ' ', i, math.min(#list, i+9)), playerName)
-  end
+  sendModuleMessage("Admins:", playerName)
+  chatMessageList(playerName, list, 10, '<V>')
   return true
 end
 
@@ -304,10 +308,8 @@ commands.bans = function(playerName, args)
   for name in next, bans do
     list[1 + #list] = name
   end
-  sendModuleMessage("ban list:", playerName)
-  for i=1, #list, 10 do
-    tfm.exec.chatMessage("<V>" .. table.concat(list, ' ', i, math.min(#list, i+9)), playerName)
-  end
+  sendModuleMessage("Ban list:", playerName)
+  chatMessageList(playerName, list, 10, '<V>')
   return true
 end
 
@@ -328,9 +330,10 @@ commands.map = function(playerName, args)
 end
 
 commands.rst = function(playerName, args)
-  if tfm.get.room.currentMap == "@0" or args[1] == 'xml' then
-    if tfm.get.room.xmlMapInfo.xml then
-      tfm.exec.newGame(tfm.get.room.xmlMapInfo.xml, doesItMeanReversed(args[1]) or doesItMeanReversed(args[2]))
+  local info = tfm.get.room.xmlMapInfo
+  if (info and info.author == "#Module") or args[1] == 'xml' then
+    if info and info.xml then
+      tfm.exec.newGame(info.xml, doesItMeanReversed(args[1]) or doesItMeanReversed(args[2]))
     end
   else
     tfm.exec.newGame(tfm.get.room.currentMap, doesItMeanReversed(args[1]))
@@ -339,14 +342,14 @@ end
 
 commands.time = function(playerName, args)
   local time = args[1]
+  if not time then
+    sendModuleMessage('Usage: <BL>!time [seconds]', playerName)
+    return true
+  end
 
   if time then
     local minutes = tonumber(time:lower():match('^(%d+)m$'))
     time = minutes and (minutes * 60) or tonumber(time)
-  end
-  
-  if not time then
-    return
   end
 
   if time > 60 then
@@ -394,7 +397,9 @@ commands.mapname = function(playerName, args)
     ui.setMapName(mapName)
   else
     mapName = nil
-    ui.setMapName("")
+
+    local info = tfm.get.room.xmlMapInfo
+    ui.setMapName(info and ('%s <BL>- %s'):format(info.author, tfm.get.room.currentMap) or tfm.get.room.currentMap)
   end
 end
 
@@ -436,6 +441,7 @@ commands.copynpc = function(playerName, args)
 end
 commands.npc = function(playerName, args)
   if not admins[playerName] and not settings.allow_npc then
+    sendModuleMessage('<R>Creating NPC is disallowed', playerName)
     return
   end
 
@@ -450,10 +456,13 @@ commands.npc = function(playerName, args)
     return
   end
 
-  if admins[playerName] then
-    local targetPlayer = tfm.get.room.playerList[look]
-    if targetPlayer then
+  local targetPlayer = tfm.get.room.playerList[look]
+  if targetPlayer then
+    if admins[playerName] then
       look = targetPlayer.look
+    else
+      sendModuleMessage('<R>Only admins can copy outfits', playerName)
+      return
     end
   end
 
@@ -462,20 +471,27 @@ commands.npc = function(playerName, args)
 end
 
 commands.timeup = function(playerName, args)
-  if args[1] then
-    timeupMessage = args[-1]
+  if not args[1] then
+    sendModuleMessage('Usage: <BL>!timeup [message]', playerName)
+    return true
   end
+
+  timeupMessage = args[-1]
 end
 
 commands.timewarning = function(playerName, args)
-  if args[1] then
-    timeWarningMessage = args[-1]
+  if not args[1] then
+    sendModuleMessage('Usage: <BL>!timewarning [message]', playerName)
+    return true
   end
+
+  timeWarningMessage = args[-1]
 end
 
 commands.newtheme = function(playerName, args)
   if not args[1] then
-    return
+    sendModuleMessage('Usage: <BL>!newtheme [theme]', playerName)
+    return true
   end
 
   currentTheme = args[-1]
@@ -493,7 +509,8 @@ end
 
 commands.t = function(playerName, args)
   if not args[1] then
-    return
+    sendModuleMessage('Usage: <BL>!t [admin chat message]', playerName)
+    return true
   end
 
   announceAdmins(("<N2>• <b>[%s]</b> %s"):format(playerName, args[-1]))
@@ -504,7 +521,8 @@ commands.a = commands.t
 
 commands.announce = function(playerName, args)
   if not args[1] then
-    return
+    sendModuleMessage('Usage: <BL>!t [announce message]', playerName)
+    return true
   end
 
   tfm.exec.chatMessage(("<S><b>[%s]</b> %s"):format(playerName, args[-1]), nil)
@@ -512,13 +530,16 @@ commands.announce = function(playerName, args)
 end
 
 commands.lock = function(playerName, args)
-  local limit = tonumber(args[1]) or 50
-  tfm.exec.setRoomMaxPlayers(math.min(math.max(limit, 1), 100))
+  local limit = math.min(math.max(tonumber(args[1]) or 50, 1), 100)
+  tfm.exec.setRoomMaxPlayers(limit)
+  sendModuleMessage('Room has been locked to ' .. limit .. ' mice.', nil)
+  return true
 end
 
 commands.pw = function(playerName, args)
   local password = args[-1]
   tfm.exec.setRoomPassword(password)
+  sendModuleMessage('Room password has been changed.', nil)
 end
 
 commands.grav = function(playerName, args)
@@ -530,6 +551,7 @@ end
 commands.admin = function(playerName, args)
   local targetName = args[1]
   if not targetName then
+    sendModuleMessage('Usage: <BL>!admin [target]', playerName)
     return
   end
 
@@ -552,6 +574,7 @@ end
 commands.unadmin = function(playerName, args)
   local targetName = args[1]
   if not targetName then
+    sendModuleMessage('Usage: <BL>!unadmin [target]', playerName)
     return
   end
 
@@ -598,7 +621,24 @@ commands.arrow = function(playerName, args)
 end
 
 commands.shamode = function(playerName, args)
-  tfm.exec.setShamanMode(playerName, tonumber(args[1]))
+  local mode = args[1]
+
+  if mode == 'normal' then
+    mode = 0
+  elseif mode == 'hard' then
+    mode = 1
+  elseif mode == 'div' or mode == 'divinity' then
+    mode = 2
+  else
+    mode = tonumber(args[1])
+  end
+
+  if not mode then
+    sendModuleMessage('Usage: <BL>!shamode [normal/hard/divinity/div]', playerName)
+    return
+  end
+
+  tfm.exec.setShamanMode(playerName, mode)
 end
 
 commands.score = function(playerName, args)
@@ -648,7 +688,11 @@ commands.unvampire = function(playerName, args)
 end
 
 commands.tp = function(playerName, args)
-  tpTarget[playerName] = args[1]
+  if args[1] == 'off' then
+    tpTarget[playerName] = nil
+  end
+
+  tpTarget[playerName] = args[1] or playerName
 end
 
 commands.tpp = function(playerName, args)
@@ -657,10 +701,15 @@ commands.tpp = function(playerName, args)
   local destPlayer = destName and tfm.get.room.playerList[destName]
 
   if not destPlayer then
+    sendModuleMessage('Usage: <BL>!tpp [target] [toPlayer]', playerName)
     return
   end
 
-  tfm.exec.movePlayer(sourceName, destName.x, destName.y)
+  local function moveToTarget(sourceName)
+    tfm.exec.movePlayer(sourceName, destName.x, destName.y)
+  end
+
+  multiTargetCall(args[1], moveToTarget)
 end
 
 local function setAllowTeleport(playerName, yes)
@@ -668,6 +717,11 @@ local function setAllowTeleport(playerName, yes)
 end
 
 commands.cantp = function(playerName, args)
+  if not args[1] then
+    sendModuleMessage('Usage: <BL>!cantp [target] (no)', playerName)
+    return true
+  end
+
   local yes = args[2] ~= 'no' or nil
 
   if args[1] == 'all' and not yes then
@@ -680,6 +734,12 @@ end
 commands.link = function(playerName, args)
   local playerName1 = args[1]
   local playerName2 = args[2]
+
+  if not playerName1 then
+    sendModuleMessage('Usage: <BL>!link [player1] [player2]', playerName)
+    return true
+  end
+
   if playerName1 and playerName2 then
     tfm.exec.linkMice(playerName1, playerName2, true)
   end
@@ -687,10 +747,21 @@ end
 
 commands.unlink = function(playerName, args)
   local playerName1 = args[1]
-  local playerName2 = args[2]
-  if playerName1 and playerName2 then
-    tfm.exec.linkMice(playerName1, playerName2, false)
+  local playerName2 = args[2] or playerName1
+
+  if not playerName1 then
+    sendModuleMessage('Usage: <BL>!unlink [all/player1] ([player2])', playerName)
+    return true
   end
+
+  if playerName1 == "all" then
+    for name in next, roomPlayers do
+      tfm.exec.linkMice(name, name, false)
+    end
+    return
+  end
+
+  tfm.exec.linkMice(playerName1, playerName2, false)
 end
 
 commands.freeze = function(playerName, args)
@@ -833,6 +904,7 @@ end
 
 commands.join = function(playerName, args)
   if not settings.allow_join or participants[playerName] ~= nil then
+    sendModuleMessage('<R>You cannot join the show right now.', playerName)
     return
   end
 
@@ -854,7 +926,7 @@ end
 commands.remove = function(playerName, args)
   if args[1] == "all" then
     participants = {}
-    sendModuleMessage('<N>Participant list has been cleared.', nil)
+    sendModuleMessage('<N>Participants list has been cleaned.', nil)
 
     if settings.auto_color then
       for name in next, roomPlayers do
@@ -871,6 +943,12 @@ end
 commands.group = function(playerName, args)
   local number = tonumber(args[1])
   if not number then
+    sendModuleMessage('Usage: <BL>!group [size] (private)', playerName)
+    return
+  end
+
+  if number < 1 then
+    sendModuleMessage('._.', playerName)
     return
   end
 
@@ -881,12 +959,15 @@ commands.group = function(playerName, args)
     end
   end
 
-  local groups = {}
+  local target = args[2] == 'private' and playerName or nil
+
+  sendModuleMessage(('Random groups of %s:'):format(number), target)
+
   local count = math.ceil(#list / number)
   local index, group
   for i=1, count do
     group = {}
-    groups[i] = group
+
     for j=1, number do
       if #list == 0 then
         break
@@ -896,11 +977,8 @@ commands.group = function(playerName, args)
       list[index] = list[#list]
       list[#list] = nil
     end
-  end
 
-  sendModuleMessage(('Randomized groups of %s:'):format(number), nil)
-  for i=1, #groups do
-    tfm.exec.chatMessage("<V>" .. table.concat(groups[i], ' '), nil)
+    chatMessageList(target, group, 10, ('<N>Group-%s: <V>'):format(i))
   end
 end
 
