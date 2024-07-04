@@ -1,4 +1,4 @@
-local VERSION = "1.8"
+local VERSION = "1.9"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -144,6 +144,15 @@ local function multiTargetCall(targetName, fnc, ...)
   if multi == 'players' then
     for targetName in next, roomPlayers do
       if not admins[targetName] then
+        fnc(targetName, ...)
+      end
+    end
+    return
+  end
+
+  if multi == 'out' then
+    for targetName in next, roomPlayers do
+      if not admins[targetName] and not participants[targetName] then
         fnc(targetName, ...)
       end
     end
