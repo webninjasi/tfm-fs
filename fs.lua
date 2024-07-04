@@ -1,4 +1,4 @@
-local VERSION = "1.14"
+local VERSION = "1.15"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -1073,8 +1073,12 @@ function eventPlayerRespawn(playerName)
     tfm.exec.freezePlayer(playerName, true, true)
   end
 
-  if participants[playerName] then
-    tfm.exec.setNameColor(playerName, participantsColor)
+  if settings.auto_color then
+    if participants[playerName] then
+      tfm.exec.setNameColor(playerName, participantsColor)
+    elseif participants[playerName] == false then
+      tfm.exec.setNameColor(playerName, participantOutColor)
+    end
   end
 
   if settings.auto_cp then
