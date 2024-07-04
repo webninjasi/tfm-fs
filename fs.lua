@@ -1,4 +1,4 @@
-local VERSION = "1.0"
+local VERSION = "1.1"
 local admins = {
   ["Mckeydown#0000"] = 10,
   ["Lays#1146"] = 10,
@@ -331,10 +331,11 @@ local function createNPC(playerName, look)
     return
   end
 
+  look = look or player.look
   playerNPC[playerName] = look
   tfm.exec.addNPC(playerName, {
     title = player.title,
-    look = look or player.look,
+    look = look,
     x = player.x,
     y = player.y,
     female = player.gender == 0,
@@ -343,10 +344,10 @@ local function createNPC(playerName, look)
   })
 end
 commands.removenpc = function(playerName, args)
-  multiTargetCall(args[1], removeNPC)
+  multiTargetCall(args[1] or playerName, removeNPC)
 end
 commands.copynpc = function(playerName, args)
-  multiTargetCall(args[1], createNPC)
+  multiTargetCall(args[1] or playerName, createNPC)
 end
 commands.npc = function(playerName, args)
   if not admins[playerName] and not settings.allow_npc then
@@ -354,6 +355,8 @@ commands.npc = function(playerName, args)
   end
 
   if not args[1] then
+    createNPC(playerName)
+    announceAdmins(("<V>[%s] <BL>!npc"):format(playerName))
     return
   end
 
@@ -568,13 +571,18 @@ commands.tpp = function(playerName, args)
   tfm.exec.movePlayer(sourceName, destName.x, destName.y)
 end
 
+local function setAllowTeleport(playerName, yes)
+  canTeleport[targetName] = yes
+end
+
 commands.cantp = function(playerName, args)
-  local targetName = args[1]
-  if not targetName then
-    return
+  local yes = args[2] ~= 'no' or nil
+
+  if args[1] == 'all' and not yes then
+    canTeleport = {}
   end
 
-  canTeleport[targetName] = args[2] ~= 'no' or nil
+  multiTargetCall(args[1], setAllowTeleport, yes)
 end
 
 commands.link = function(playerName, args)
@@ -669,8 +677,13 @@ commands.clear = function(playerName, args)
     return
   end
 
+  local list = {}
   for objId in next, tfm.get.room.objectList do
-    tfm.exec.removeObject(objId)
+    list[1 + #list] = objId
+  end
+
+  for i=1, #list do
+    tfm.exec.removeObject(list[i])
   end
 end
 
@@ -860,7 +873,7 @@ function eventMouse(playerName, x, y)
       return
     end
 
-    arrowAllowTime[playerName] = os.time() + 500
+    arrowAllowTime[playerName] = os.time() + 100
     tfm.exec.addShamanObject(0, x, y)
   end
 
