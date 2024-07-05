@@ -1,4 +1,4 @@
-local VERSION = "1.29"
+local VERSION = "1.30"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -24,6 +24,8 @@ local settings = {
   auto_color = true,
   time_warning = true,
   log_npc = false,
+  log_admin_joins = false,
+  log_participant_joins = false,
 }
 
 local mapName
@@ -1113,6 +1115,12 @@ function eventNewPlayer(playerName)
   for targetName, look in next, playerNPC do
     createNPC(targetName, look, true)
   end
+
+  if admins[playerName] and settings.log_admin_joins then
+    announceAdmins(('<N2>• <V>%s <N2>has joined the room.'):format(playerName))
+  elseif participants[playerName] and settings.log_participant_joins then
+    announceAdmins(('<S>• <V>%s <S>has joined the room.'):format(playerName))
+  end
 end
 
 function eventPlayerLeft(playerName)
@@ -1120,6 +1128,12 @@ function eventPlayerLeft(playerName)
   tpTarget[playerName] = nil
   arrowEnabled[playerName] = nil
   colorTarget[playerName] = nil
+
+  if admins[playerName] and settings.log_admin_joins then
+    announceAdmins(('<N2>• <V>%s <N2>has left the room.'):format(playerName))
+  elseif participants[playerName] and settings.log_participant_joins then
+    announceAdmins(('<S>• <V>%s <S>has left the room.'):format(playerName))
+  end
 end
 
 function eventPlayerRespawn(playerName)
