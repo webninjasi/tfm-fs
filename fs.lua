@@ -1,4 +1,4 @@
-local VERSION = "1.33"
+local VERSION = "1.34"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -830,7 +830,15 @@ local function setNightmode(targetName, on)
   tfm.exec.setPlayerNightMode(on, targetName)
 end
 commands.nightmode = function(playerName, args)
-  multiTargetCall(args[1] or playerName, setNightmode, args[2] ~= 'off' and args[2] ~= 'no')
+  local targetName = args[1] or playerName
+  local enabled = args[2] ~= 'off' and args[2] ~= 'no'
+
+  if args[1] == 'off' or args[1] == 'no' then
+    targetName = playerName
+    enabled = false
+  end
+
+  multiTargetCall(targetName, setNightmode, enabled)
 end
 
 local function playerVictory(targetName)
