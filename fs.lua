@@ -1,4 +1,4 @@
-local VERSION = "1.26"
+local VERSION = "1.27"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -430,10 +430,14 @@ local function createNPC(playerName, look, keepPos)
     return
   end
 
-  if look and look:find('%.') == 1 then
-    look = ((playerNPC[playerName] or '') .. look:gsub('^%.+', '')):sub(1, 4096)
-  else
+  if not look or look:find(';') then
     look = look or player.look
+  else
+    look = (playerNPC[playerName] or '') .. look
+  end
+
+  if #look > 4096 then
+    return
   end
 
   local pos = keepPos and playerNPCPos[playerName] or {
