@@ -1,4 +1,4 @@
-local VERSION = "1.31"
+local VERSION = "1.32"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -214,21 +214,9 @@ local function chatMessageList(playerName, list, max, pre)
 end
 
 
-local allowCommandForEveryone = {
-  ["version"] = true,
-  ["mapinfo"] = true,
-  ["commands"] = true,
-  ["help"] = true,
-  ["admins"] = true,
-  ["theme"] = true,
-  ["npc"] = true,
-  ["join"] = true,
-  ["leave"] = true,
-  ["participants"] = true,
-  ["room"] = true,
-}
 local commands = {}
 local commandAlias = {}
+local commandPerms = {}
 
 commands.room = function(playerName, args)
   sendModuleMessage("You can create your room by typing\n<BL>/room " .. MODULE_ROOM:format(playerName), playerName)
@@ -243,6 +231,7 @@ commands.room = function(playerName, args)
     sendModuleMessage("You are currently in\n<BL>/room " .. roomName, playerName)
   end
 end
+commandPerms[commands.room] = 0
 
 commands.help = function(playerName, args)
   tfm.exec.chatMessage("<N>This is a small utility module made for fashion shows. You can type <BL>!commands <N>to see available commands.", playerName)
@@ -255,15 +244,18 @@ commands.help = function(playerName, args)
     end
   end
 end
+commandPerms[commands.help] = 0
 
 commands.mapinfo = function(playerName, args)
   sendModuleMessage(tostring(lastMapCode), playerName)
 end
+commandPerms[commands.mapinfo] = 0
 
 commands.version = function(playerName, args)
   sendModuleMessage("fs v" .. VERSION .. ' ~ Lays#1146', playerName)
 end
 commandAlias.v = commands.version
+commandPerms[commands.version] = 0
 
 commands.commands = function(playerName, args)
   local list = {}
@@ -283,6 +275,7 @@ commands.commands = function(playerName, args)
   sendModuleMessage('You can use the following targets in most of the commands: <BL>all room admins players out in/participants', playerName)
 end
 commandAlias.cmds = commands.commands
+commandPerms[commands.commands] = 0
 
 commands.participants = function(playerName, args)
   local inRoom, outRoom, removed = {}, {}, {}
@@ -303,6 +296,7 @@ commands.participants = function(playerName, args)
   chatMessageList(playerName, removed, 10, '<R>')
   return true
 end
+commandPerms[commands.participants] = 0
 
 commands.admins = function(playerName, args)
   local list = {}
@@ -315,6 +309,7 @@ commands.admins = function(playerName, args)
   chatMessageList(playerName, list, 10, '<V>')
   return true
 end
+commandPerms[commands.admins] = 0
 
 commands.bans = function(playerName, args)
   local list = {}
@@ -506,6 +501,7 @@ commands.npc = function(playerName, args)
   end
 end
 commandAlias.dressing = commands.npc
+commandPerms[commands.npc] = 0
 
 commands.timeup = function(playerName, args)
   if not args[1] then
@@ -544,6 +540,7 @@ end
 commands.theme = function(playerName, args)
   sendModuleMessage('Theme: ' .. currentTheme, playerName)
 end
+commandPerms[commands.theme] = 0
 
 commands.t = function(playerName, args)
   if not args[1] then
@@ -679,6 +676,7 @@ commands.shamode = function(playerName, args)
 
   tfm.exec.setShamanMode(playerName, mode)
 end
+commandPerms[commands.shamode] = 0
 
 commands.score = function(playerName, args)
   local score = tonumber(args[2]) or 0
@@ -963,6 +961,7 @@ commands.join = function(playerName, args)
 
   updateParticipant(playerName, true)
 end
+commandPerms[commands.join] = 0
 
 commands.leave = function(playerName, args)
   if not participants[playerName] then
@@ -971,6 +970,7 @@ commands.leave = function(playerName, args)
 
   updateParticipant(playerName, nil)
 end
+commandPerms[commands.leave] = 0
 
 commands.add = function(playerName, args)
   multiTargetCall(args[1], updateParticipant, true)
@@ -1266,18 +1266,22 @@ function eventChatCommand(playerName, command)
   args[-1] = command:sub(#args[0] + 2)
   args[0] = args[0]:lower()
 
-  if not admins[playerName] and not allowCommandForEveryone[args[0]] then
-    return
-  end
-
   local cmd = commands[args[0]] or commandAlias[args[0]]
   if cmd then
+    local playerPerm = admins[playerName] or 0
+    local cmdPerm = commandPerms[cmd] or 5
+
+    if playerPerm < cmdPerm then
+      return
+    end
+
     ok, err = pcall(cmd, playerName, args)
     if not ok and err then
       sendModuleMessage(("<R>Module error on command !%s: <BL>%s"):format(args[0], tostring(err)), playerName)
+      return
     end
 
-    if not allowCommandForEveryone[args[0]] and (ok and not err) then
+    if cmdPerm ~= 0 then
       announceAdmins(("<V>[%s] <BL>!%s"):format(playerName, command))
     end
   end
