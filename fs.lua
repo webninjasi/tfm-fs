@@ -1,4 +1,4 @@
-local VERSION = "1.28"
+local VERSION = "1.29"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -499,7 +499,7 @@ end
 
 commands.timeup = function(playerName, args)
   if not args[1] then
-    sendModuleMessage('Usage: <BL>!timeup [message]', playerName)
+    sendModuleMessage('Changes time is up message: <BL>!timeup [message]', playerName)
     return true
   end
 
@@ -508,7 +508,7 @@ end
 
 commands.timewarning = function(playerName, args)
   if not args[1] then
-    sendModuleMessage('Usage: <BL>!timewarning [message]', playerName)
+    sendModuleMessage('Changes last 1 minute warning message: <BL>!timewarning [message]', playerName)
     return true
   end
 
