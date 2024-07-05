@@ -1,4 +1,4 @@
-local VERSION = "1.32"
+local VERSION = "1.33"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -42,6 +42,7 @@ local arrowEnabled = {}
 local arrowAllowTime = {}
 local deathPosition = {}
 local colorTarget = {}
+local allowMortHotkeyTime = {}
 local participantsColor = 0xffe249
 local participantOutColor = 0xCB546B
 local defaultGravity, defaultWind, mapGravity, mapWind
@@ -1141,6 +1142,8 @@ function eventPlayerLeft(playerName)
   tpTarget[playerName] = nil
   arrowEnabled[playerName] = nil
   colorTarget[playerName] = nil
+  allowMortHotkeyTime[playerName] = nil
+  arrowAllowTime[playerName] = nil
 
   if admins[playerName] and settings.log_admin_joins then
     announceAdmins(('<N2>• <V>%s <N2>has left the room.'):format(playerName))
@@ -1225,6 +1228,11 @@ function eventKeyboard(playerName, keyCode, down)
   if keyCode == 16 then
     holdingShift[playerName] = down
   elseif keyCode == 77 or keyCode == 46 then
+    if allowMortHotkeyTime[playerName] and os.time() < allowMortHotkeyTime[playerName] then
+      return
+    end
+
+    allowMortHotkeyTime[playerName] = os.time() + 500
     tfm.exec.killPlayer(playerName)
   end
 end
