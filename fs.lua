@@ -1,4 +1,4 @@
-local VERSION = "1.34"
+local VERSION = "1.35"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -841,12 +841,21 @@ commands.nightmode = function(playerName, args)
   multiTargetCall(targetName, setNightmode, enabled)
 end
 
-local function playerVictory(targetName)
+local function playerVictory(targetName, showMessage)
   tfm.exec.giveCheese(targetName)
   tfm.exec.playerVictory(targetName)
+
+  if showMessage then
+    sendModuleMessage(('<b><V>%s</V> <S>is the winner!%s</S></b>'):format(
+      targetName, ('!'):rep(math.random(1, 5))
+    ), nil)
+  end
 end
 commands.win = function(playerName, args)
-  multiTargetCall(args[1] or playerName, playerVictory)
+  multiTargetCall(args[1] or playerName, playerVictory, true)
+end
+commands.hole = function(playerName, args)
+  multiTargetCall(args[1] or playerName, playerVictory, false)
 end
 
 commands.sy = function(playerName, args)
