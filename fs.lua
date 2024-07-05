@@ -1,4 +1,4 @@
-local VERSION = "1.35"
+local VERSION = "1.36"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -43,8 +43,10 @@ local arrowAllowTime = {}
 local deathPosition = {}
 local colorTarget = {}
 local allowMortHotkeyTime = {}
+local playerColor = {}
 local participantsColor = 0xffe249
 local participantOutColor = 0xCB546B
+local guestColor = 0
 local defaultGravity, defaultWind, mapGravity, mapWind
 local defaultFreeze
 local currentTheme = 'TBD'
@@ -157,9 +159,18 @@ local function multiTargetCall(targetName, fnc, ...)
     return
   end
 
-  if multi == 'out' then
+  if multi == 'guest' then
     for targetName in next, roomPlayers do
       if not admins[targetName] and not participants[targetName] then
+        fnc(targetName, ...)
+      end
+    end
+    return
+  end
+
+  if multi == 'out' then
+    for targetName in next, roomPlayers do
+      if not admins[targetName] and participants[targetName] == false then
         fnc(targetName, ...)
       end
     end
@@ -273,7 +284,7 @@ commands.commands = function(playerName, args)
 
   table.sort(list)
   sendModuleMessage('Available commands: <BL>' .. table.concat(list, ', '), playerName)
-  sendModuleMessage('You can use the following targets in most of the commands: <BL>all room admins players out in/participants', playerName)
+  sendModuleMessage('You can use the following targets in most of the commands: <BL>all room admins players guest out in/participants', playerName)
 end
 commandAlias.cmds = commands.commands
 commandPerms[commands.commands] = 0
@@ -378,6 +389,15 @@ commands.size = function(playerName, args)
   multiTargetCall(args[1], tfm.exec.changePlayerSize, size)
 end
 
+local function setNameColor(playerName, color)
+  if not playerName then
+    return
+  end
+
+  color = color or playerColor[playerName] or guestColor
+  playerColor[playerName] = color
+  tfm.exec.setNameColor(playerName, color)
+end
 commands.color = function(playerName, args)
   local target = args[1]
   local color = args[2] and tonumber(args[2], 16)
@@ -387,9 +407,11 @@ commands.color = function(playerName, args)
       participantsColor = color
     elseif target == 'out' then
       participantOutColor = color
+    elseif target == 'guest' then
+      guestColor = color
     end
 
-    multiTargetCall(target, tfm.exec.setNameColor, color)
+    multiTargetCall(target, setNameColor, color)
   else
     colorTarget[playerName] = target or playerName
     ui.showColorPicker(444, playerName, 0, "Pick a color for name color:")
@@ -941,9 +963,11 @@ local function updateParticipant(playerName, status)
 
   if settings.auto_color then
     if status then
-      tfm.exec.setNameColor(playerName, participantsColor)
+      setNameColor(playerName, participantsColor)
+    elseif status == false then
+      setNameColor(playerName, participantOutColor)
     else
-      tfm.exec.setNameColor(playerName, participantOutColor)
+      setNameColor(playerName, guestColor)
     end
   end
 end
@@ -996,14 +1020,14 @@ end
 
 commands.remove = function(playerName, args)
   if args[1] == "all" then
-    participants = {}
-    sendModuleMessage('<N>Participants list has been cleaned.', nil)
-
     if settings.auto_color then
-      for name in next, roomPlayers do
-        tfm.exec.setNameColor(playerName, participantOutColor)
+      for name in next, participants do
+        setNameColor(name, guestColor)
       end
     end
+
+    participants = {}
+    sendModuleMessage('<N>Participants list has been cleaned.', nil)
 
     return
   end
@@ -1174,11 +1198,15 @@ function eventPlayerRespawn(playerName)
     tfm.exec.freezePlayer(playerName, true, true)
   end
 
-  if settings.auto_color then
+  if playerColor[playerName] then
+    setNameColor(playerName)
+  elseif settings.auto_color then
     if participants[playerName] then
-      tfm.exec.setNameColor(playerName, participantsColor)
+      setNameColor(playerName, participantsColor)
     elseif participants[playerName] == false then
-      tfm.exec.setNameColor(playerName, participantOutColor)
+      setNameColor(playerName, participantOutColor)
+    else
+      setNameColor(playerName, guestColor)
     end
   end
 
@@ -1232,9 +1260,11 @@ function eventColorPicked(colorPickerId, playerName, color)
       participantsColor = color
     elseif target == 'out' then
       participantOutColor = color
+    elseif target == 'guest' then
+      guestColor = color
     end
 
-    multiTargetCall(target, tfm.exec.setNameColor, color)
+    multiTargetCall(target, setNameColor, color)
     announceAdmins(("<V>[%s] <BL>!color %s %6x"):format(playerName, target, color))
   end
 
