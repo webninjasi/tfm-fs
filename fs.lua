@@ -1,4 +1,4 @@
-local VERSION = "1.27"
+local VERSION = "1.28"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -898,6 +898,10 @@ local function updateParticipant(playerName, status)
 
   if status then
     sendModuleMessage('<V>' .. playerName .. ' <N>has joined the show.', nil)
+
+    if settings.allow_npc then
+      sendModuleMessage('You can type <BL>!npc [/dressing code here] <N>to create an NPC wearing a fit you created in /dressing or in external dress room tools.', playerName)
+    end
   elseif status == false then
     sendModuleMessage('<V>' .. playerName .. ' <N>has been removed from the show.', nil)
   else
