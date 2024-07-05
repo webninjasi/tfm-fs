@@ -1,4 +1,4 @@
-local VERSION = "1.36"
+local VERSION = "1.37"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -1330,13 +1330,13 @@ function eventChatCommand(playerName, command)
       return
     end
 
-    ok, err = pcall(cmd, playerName, args)
-    if not ok and err then
-      sendModuleMessage(("<R>Module error on command !%s: <BL>%s"):format(args[0], tostring(err)), playerName)
+    local ok, ret = pcall(cmd, playerName, args)
+    if not ok then
+      sendModuleMessage(("<R>Module error on command !%s:\n<BL>%s\n<G>v%s"):format(args[0], tostring(ret), VERSION), playerName)
       return
     end
 
-    if cmdPerm ~= 0 then
+    if cmdPerm ~= 0 and not ret then
       announceAdmins(("<V>[%s] <BL>!%s"):format(playerName, command))
     end
   end
@@ -1348,7 +1348,7 @@ for eventName, eventFunc in next, _G do
     _G[eventName] = function(...)
       ok, err = pcall(eventFunc, ...)
       if not ok then
-        announceAdmins(("<R>Module error on %s: <BL>%s"):format(eventName, tostring(err)))
+        announceAdmins(("<R>Module error on %s:\n<BL>%s"):format(eventName, tostring(err)))
       end
     end
   end
