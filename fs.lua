@@ -1,4 +1,4 @@
-local VERSION = "1.37"
+local VERSION = "1.38"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -190,7 +190,7 @@ local function multiTargetCall(targetName, fnc, ...)
 end
 
 local function updateThemeUI()
-  if settings.mapname_theme then
+  if settings.mapname_theme and mapName then
     ui.setMapName(mapName)
   end
 
