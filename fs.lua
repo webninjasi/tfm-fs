@@ -1,4 +1,4 @@
-local VERSION = "1.30"
+local VERSION = "1.31"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -228,6 +228,7 @@ local allowCommandForEveryone = {
   ["room"] = true,
 }
 local commands = {}
+local commandAlias = {}
 
 commands.room = function(playerName, args)
   sendModuleMessage("You can create your room by typing\n<BL>/room " .. MODULE_ROOM:format(playerName), playerName)
@@ -262,6 +263,7 @@ end
 commands.version = function(playerName, args)
   sendModuleMessage("fs v" .. VERSION .. ' ~ Lays#1146', playerName)
 end
+commandAlias.v = commands.version
 
 commands.commands = function(playerName, args)
   local list = {}
@@ -280,6 +282,7 @@ commands.commands = function(playerName, args)
   sendModuleMessage('Available commands: <BL>' .. table.concat(list, ', '), playerName)
   sendModuleMessage('You can use the following targets in most of the commands: <BL>all room admins players out in/participants', playerName)
 end
+commandAlias.cmds = commands.commands
 
 commands.participants = function(playerName, args)
   local inRoom, outRoom, removed = {}, {}, {}
@@ -322,6 +325,7 @@ commands.bans = function(playerName, args)
   chatMessageList(playerName, list, 10, '<V>')
   return true
 end
+commandAlias.banlist = commands.bans
 
 commands.map = function(playerName, args)
   local code, perm
@@ -349,6 +353,8 @@ commands.rst = function(playerName, args)
     tfm.exec.newGame(tfm.get.room.currentMap, doesItMeanReversed(args[1]))
   end
 end
+commandAlias.reset = commands.rst
+commandAlias.restart = commands.rst
 
 commands.time = function(playerName, args)
   local time = args[1]
@@ -394,6 +400,7 @@ commands.color = function(playerName, args)
     return true
   end
 end
+commandAlias.name = commands.color
 
 commands.snow = function(playerName, args)
   local duration = tonumber(args[1])
@@ -498,6 +505,7 @@ commands.npc = function(playerName, args)
     announceAdmins(("<V>[%s] <BL>!npc %s"):format(playerName, args[-1]))
   end
 end
+commandAlias.dressing = commands.npc
 
 commands.timeup = function(playerName, args)
   if not args[1] then
@@ -546,8 +554,8 @@ commands.t = function(playerName, args)
   announceAdmins(("<N2>• <b>[%s]</b> %s"):format(playerName, args[-1]))
   return true
 end
-commands.c = commands.t
-commands.a = commands.t
+commandAlias.c = commands.t
+commandAlias.a = commands.t
 
 commands.announce = function(playerName, args)
   if not args[1] then
@@ -576,6 +584,7 @@ commands.grav = function(playerName, args)
   mapGravity = tonumber(args[1]) or defaultGravity
   tfm.exec.setWorldGravity(mapWind, mapGravity)
 end
+commandAlias.gravity = commands.grav
 
 commands.admin = function(playerName, args)
   local targetName = args[1]
@@ -638,6 +647,7 @@ commands.unadmin = function(playerName, args)
 
   admins[targetName] = nil
 end
+commandAlias.deadmin = commands.unadmin
 
 commands.arrow = function(playerName, args)
   if args[1] == 'on' then
@@ -687,10 +697,12 @@ end
 commands.sham = function(playerName, args)
   multiTargetCall(args[1] or playerName, tfm.exec.setShaman, true)
 end
+commandAlias.shaman = commands.sham
 
 commands.unsham = function(playerName, args)
   multiTargetCall(args[1] or playerName, tfm.exec.setShaman, false)
 end
+commandAlias.unshaman = commands.unsham
 
 commands.meep = function(playerName, args)
   multiTargetCall(args[1] or playerName, tfm.exec.giveMeep, true)
@@ -886,6 +898,7 @@ commands.settings = function(playerName, args)
   disableStuff()
   updateThemeUI()
 end
+commandAlias.set = commands.settings
 
 local function updateParticipant(playerName, status)
   if participants[playerName] == status then
@@ -1257,7 +1270,7 @@ function eventChatCommand(playerName, command)
     return
   end
 
-  local cmd = commands[args[0]]
+  local cmd = commands[args[0]] or commandAlias[args[0]]
   if cmd then
     ok, err = pcall(cmd, playerName, args)
     if not ok and err then
