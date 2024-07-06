@@ -1,4 +1,4 @@
-local VERSION = "1.42"
+local VERSION = "1.43"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -45,6 +45,7 @@ local deathPosition = {}
 local colorTarget = {}
 local allowMortHotkeyTime = {}
 local playerColor = {}
+local isDead = {}
 local participantsColor = 0xffe249
 local participantOutColor = 0xCB546B
 local guestColor = 0
@@ -492,7 +493,8 @@ local function createNPC(playerName, look, keepPos, visibleFor)
 
   removeNPC(playerName)
 
-  local pos = keepPos and playerNPCPos[playerName] or {
+  local death = isDead[playerName] and deathPosition[playerName]
+  local pos = keepPos and playerNPCPos[playerName] or death or {
     x = player.x,
     y = player.y,
   }
@@ -1122,6 +1124,7 @@ function eventNewGame()
   lastMinuteWarningShown = false
   playerNPC = {}
   playerNPCPos = {}
+  isDead = {}
 
   if lastMapCode ~= tfm.get.room.currentMap then
     deathPosition = {}
@@ -1210,6 +1213,7 @@ function eventNewPlayer(playerName)
 end
 
 function eventPlayerLeft(playerName)
+  isDead[playerName] = nil
   roomPlayers[playerName] = nil
   tpTarget[playerName] = nil
   arrowEnabled[playerName] = nil
@@ -1225,6 +1229,8 @@ function eventPlayerLeft(playerName)
 end
 
 function eventPlayerRespawn(playerName)
+  isDead[playerName] = nil
+
   if defaultFreeze then
     tfm.exec.freezePlayer(playerName, true, true)
   end
@@ -1253,6 +1259,8 @@ end
 function eventPlayerDied(playerName)
   local player = tfm.get.room.playerList[playerName]
 
+  isDead[playerName] = true
+
   if player then
     deathPosition[playerName] = {
       x = player.x,
@@ -1268,6 +1276,8 @@ function eventPlayerDied(playerName)
 end
 
 function eventPlayerWon(playerName)
+  isDead[playerName] = true
+
   if not bans[playerName] then
     if settings.auto_respawn then
       tfm.exec.respawnPlayer(playerName)
