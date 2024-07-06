@@ -1,4 +1,4 @@
-local VERSION = "1.38"
+local VERSION = "1.39"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -197,7 +197,7 @@ local function updateThemeUI()
   if settings.theme_ui then
     ui.addTextArea(
       666,
-      ('<font color="#%6x">Theme: %s'):format(
+      ('<font color="#%.6x">Theme: %s'):format(
         0xffffff,
         currentTheme:gsub('&', '&amp;'):gsub('\\', '\\\\'):gsub('<', '&lt;')
       ),
@@ -1265,7 +1265,7 @@ function eventColorPicked(colorPickerId, playerName, color)
     end
 
     multiTargetCall(target, setNameColor, color)
-    announceAdmins(("<V>[%s] <BL>!color %s %6x"):format(playerName, target, color))
+    announceAdmins(("<V>[%s] <BL>!color %s %.6x"):format(playerName, target, color))
   end
 
   colorTarget[playerName] = nil
