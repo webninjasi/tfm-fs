@@ -1,4 +1,4 @@
-local VERSION = "1.41"
+local VERSION = "1.42"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -309,6 +309,7 @@ commands.participants = function(playerName, args)
   chatMessageList(playerName, removed, 10, '<R>')
   return true
 end
+commandAlias['in'] = commands.participants
 commandPerms[commands.participants] = 0
 
 commands.admins = function(playerName, args)
@@ -346,23 +347,30 @@ commands.map = function(playerName, args)
   if not code and not perm then
     if doesItMeanReversed(args[1]) then
       newRandomMap(true)
-    else
-      sendModuleMessage('Usage: <BL>!map [@code|#perm|reversed] (reversed)', playerName)
+      return
     end
-    return
+
+    sendModuleMessage('Usage: <BL>!map [@code|#perm|reversed] (reversed)', playerName)
+    return true
   end
 
   tfm.exec.newGame(code or perm, doesItMeanReversed(args[2]))
 end
+commandAlias.np = commands.map
 
 commands.rst = function(playerName, args)
   local info = tfm.get.room.xmlMapInfo
+  local reversed = (
+    args[1] and doesItMeanReversed(args[1])
+    or args[2] and doesItMeanReversed(args[2])
+    or not args[1] and not args[2] and tfm.get.room.mirroredMap
+  )
   if (info and info.author == "#Module") or args[1] == 'xml' then
     if info and info.xml then
-      tfm.exec.newGame(info.xml, doesItMeanReversed(args[1]) or doesItMeanReversed(args[2]))
+      tfm.exec.newGame(info.xml, reversed)
     end
   else
-    tfm.exec.newGame(tfm.get.room.currentMap, doesItMeanReversed(args[1]))
+    tfm.exec.newGame(tfm.get.room.currentMap, reversed)
   end
 end
 commandAlias.reset = commands.rst
@@ -389,9 +397,11 @@ commands.time = function(playerName, args)
 end
 
 commands.size = function(playerName, args)
-  local size = tonumber(args[2]) or 1
+  local size = tonumber(args[2]) or tonumber(args[1])
+  local target = (args[2] or not size) and args[1] or playerName
+  size = size or 1
 
-  multiTargetCall(args[1], tfm.exec.changePlayerSize, size)
+  multiTargetCall(target, tfm.exec.changePlayerSize, size)
 end
 
 local function setNameColor(playerName, color)
@@ -407,6 +417,14 @@ commands.color = function(playerName, args)
   local target = args[1]
   local color = args[2] and tonumber(args[2], 16)
 
+  if not color then
+    color = args[1] and tonumber(args[1], 16)
+    if color then
+      setNameColor(playerName, color)
+      return
+    end
+  end
+
   if color then
     if target == 'participants' or target == 'in' then
       participantsColor = color
@@ -419,7 +437,7 @@ commands.color = function(playerName, args)
     multiTargetCall(target, setNameColor, color)
   else
     colorTarget[playerName] = target or playerName
-    ui.showColorPicker(444, playerName, 0, "Pick a color for name color:")
+    ui.showColorPicker(444, playerName, 0, "Pick a name color:")
     return true
   end
 end
@@ -456,7 +474,7 @@ local function removeNPC(playerName)
     y = -10000,
   })
 end
-local function createNPC(playerName, look, keepPos)
+local function createNPC(playerName, look, keepPos, visibleFor)
   local player = tfm.get.room.playerList[playerName]
   if not player then
     return
@@ -472,13 +490,18 @@ local function createNPC(playerName, look, keepPos)
     return
   end
 
+  removeNPC(playerName)
+
   local pos = keepPos and playerNPCPos[playerName] or {
     x = player.x,
     y = player.y,
   }
 
-  playerNPC[playerName] = look
-  playerNPCPos[playerName] = pos
+  if not visibleFor then
+    playerNPC[playerName] = look
+    playerNPCPos[playerName] = pos
+  end
+
   tfm.exec.addNPC(playerName, {
     title = player.title,
     look = look,
@@ -487,7 +510,7 @@ local function createNPC(playerName, look, keepPos)
     female = player.gender == 0,
     lookLeft = not player.isFacingRight,
     lookAtPlayer = true,
-  })
+  }, visibleFor)
 end
 commands.removenpc = function(playerName, args)
   multiTargetCall(args[1] or playerName, removeNPC)
@@ -506,23 +529,25 @@ commands.npc = function(playerName, args)
     return
   end
 
-  local look = args[-1]
-  if look == 'remove' then
+  if args[1] == 'remove' then
     removeNPC(playerName)
     return
   end
 
+  local look = args[1]
   local targetPlayer = tfm.get.room.playerList[look]
+  local visibleFor = args[2] == 'hide' and playerName or nil
+
   if targetPlayer then
-    if admins[playerName] then
-      look = targetPlayer.look
-    else
+    if not admins[playerName] then
       sendModuleMessage('<R>Only admins can copy outfits', playerName)
       return
     end
+
+    look = targetPlayer.look
   end
 
-  createNPC(playerName, look)
+  createNPC(playerName, look, false, visibleFor)
 
   if settings.log_npc then
     announceAdmins(("<V>[%s] <BL>!npc %s"):format(playerName, args[-1]))
@@ -707,9 +732,10 @@ end
 commandPerms[commands.shamode] = 0
 
 commands.score = function(playerName, args)
-  local score = tonumber(args[2]) or 0
-
-  multiTargetCall(args[1] or playerName, tfm.exec.setPlayerScore, score, false)
+  local score = tonumber(args[2]) or tonumber(args[1])
+  local target = (args[2] or not score) and args[1] or playerName
+  score = score or 0
+  multiTargetCall(target, tfm.exec.setPlayerScore, score, false)
 end
 
 commands.kill = function(playerName, args)
