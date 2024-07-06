@@ -1,9 +1,10 @@
-local VERSION = "1.43"
+local VERSION = "1.44"
 local MODULE_ROOM = "*#mckeydown fs %s"
-local admins = {
+local DEFAULT_ADMINS = {
   ["Mckeydown#0000"] = 10,
   ["Lays#1146"] = 10,
 }
+local admins = {}
 local maps = {
   7954539,
   7954420,
@@ -82,7 +83,36 @@ end
 
 
 local function sendModuleMessage(text, playerName)
-  tfm.exec.chatMessage("<BL>[module] <N>" .. tostring(text), playerName)
+  tfm.exec.chatMessage("<BL>[#] <N>" .. tostring(text), playerName)
+end
+
+local function elevatedAdminLevel(playerName)
+  if DEFAULT_ADMINS[playerName] then
+    return DEFAULT_ADMINS[playerName]
+  end
+
+  if not playerName:find('*') then
+    local playerTag = playerName:sub(#playerName-4)
+
+    if playerTag == '#0001' or playerTag == '#0010' or playerTag == '#0015' or playerTag == '#0020' then
+      return 7
+    end
+
+    local room = tfm.get.room
+
+    if room.name:find(playerName) then
+      return 6, true
+    end
+
+    local player = room.playerList[playerName]
+    local tribeName = room.name:sub(3)
+
+    if player and room.isTribeHouse and player.tribeName == tribeName then
+      return 6
+    end
+  end
+
+  return 0
 end
 
 local function initPlayer(playerName)
@@ -94,18 +124,21 @@ local function initPlayer(playerName)
   tfm.exec.bindKeyboard(playerName, 77, true, true)
   tfm.exec.bindKeyboard(playerName, 46, true, true)
 
-  local room = tfm.get.room
-  local player = room.playerList[playerName]
-  local tribeName = room.name:sub(3)
-  local isGuest = playerName:find('*')
-
-  if not isGuest and player then
-    if room.name:find(playerName) or room.isTribeHouse and player.tribeName == tribeName then
-      admins[playerName] = 6
-    end
-  end
+  local currentLevel = admins[playerName] or 0
+  local level, auto = elevatedAdminLevel(playerName)
 
   eventChatCommand(playerName, "help")
+
+  if currentLevel < level then
+    if auto then
+      admins[playerName] = level
+    else
+      sendModuleMessage(
+        '<BL>!adminme <N2>command is available for you here, please use it responsibly.',
+        playerName
+      )
+    end
+  end
 end
 
 local function newRandomMap(reversed)
@@ -244,49 +277,57 @@ commands.room = function(playerName, args)
 
     sendModuleMessage("You are currently in\n<BL>/room " .. roomName, playerName)
   end
+
+  return true
 end
 commandPerms[commands.room] = 0
 
 commands.help = function(playerName, args)
-  tfm.exec.chatMessage("<N>This is a small utility module made for fashion shows. You can type <BL>!commands <N>to see available commands.", playerName)
+  sendModuleMessage("This is a small utility module made for fashion shows. You can type <BL>!commands <N>to see available commands.", playerName)
 
   if not admins[playerName] then
     eventChatCommand(playerName, 'room onlymine')
 
     if settings.allow_join then
-      tfm.exec.chatMessage("<N>If you are here for a fashion show, type <BL>!join <N>to participate.", playerName)
+      sendModuleMessage("<N>If you are here for a fashion show, type <BL>!join <N>to participate.", playerName)
     end
   end
+
+  return true
 end
 commandPerms[commands.help] = 0
 
 commands.mapinfo = function(playerName, args)
   sendModuleMessage(tostring(lastMapCode), playerName)
+  return true
 end
 commandPerms[commands.mapinfo] = 0
 
 commands.version = function(playerName, args)
   sendModuleMessage("fs v" .. VERSION .. ' ~ Lays#1146', playerName)
+  return true
 end
 commandAlias.v = commands.version
 commandPerms[commands.version] = 0
 
 commands.commands = function(playerName, args)
   local list = {}
+  local playerLevel = admins[playerName] or 0
 
-  if admins[playerName] then
-    for commandName in next, commands do
-      list[1 + #list] = commandName
-    end
-  else
-    for commandName in next, allowCommandForEveryone do
+  for commandName, cmd in next, commands do
+    if playerLevel >= (commandPerms[cmd] or 5) and commandName ~= 'adminme' then
       list[1 + #list] = commandName
     end
   end
 
   table.sort(list)
   sendModuleMessage('Available commands: <BL>' .. table.concat(list, ', '), playerName)
-  sendModuleMessage('You can use the following targets in most of the commands: <BL>all room admins players guest out in/participants', playerName)
+
+  if playerLevel > 0 then
+    sendModuleMessage('You can use the following targets in most of the commands: <BL>all room admins players guest out in/participants', playerName)
+  end
+
+  return true
 end
 commandAlias.cmds = commands.commands
 commandPerms[commands.commands] = 0
@@ -523,17 +564,17 @@ end
 commands.npc = function(playerName, args)
   if not admins[playerName] and (not settings.allow_npc or not participants[playerName]) then
     sendModuleMessage('<R>You are not allowed to create NPC', playerName)
-    return
+    return true
   end
 
   if not args[1] then
     createNPC(playerName)
-    return
+    return settings.log_npc
   end
 
   if args[1] == 'remove' then
     removeNPC(playerName)
-    return
+    return settings.log_npc
   end
 
   local look = args[1]
@@ -543,7 +584,7 @@ commands.npc = function(playerName, args)
   if targetPlayer then
     if not admins[playerName] then
       sendModuleMessage('<R>Only admins can copy outfits', playerName)
-      return
+      return true
     end
 
     look = targetPlayer.look
@@ -551,9 +592,7 @@ commands.npc = function(playerName, args)
 
   createNPC(playerName, look, false, visibleFor)
 
-  if settings.log_npc then
-    announceAdmins(("<V>[%s] <BL>!npc %s"):format(playerName, args[-1]))
-  end
+  return settings.log_npc
 end
 commandAlias.dressing = commands.npc
 commandPerms[commands.npc] = 0
@@ -594,6 +633,7 @@ end
 
 commands.theme = function(playerName, args)
   sendModuleMessage('Theme: ' .. currentTheme, playerName)
+  return true
 end
 commandPerms[commands.theme] = 0
 
@@ -638,66 +678,93 @@ commands.grav = function(playerName, args)
 end
 commandAlias.gravity = commands.grav
 
+
+local function setAdminLevel(playerName, level, compareLevel)
+  if not playerName or not level or not compareLevel then
+    return
+  end
+
+  local currentLevel = admins[playerName] or 0
+
+  if compareLevel <= currentLevel or compareLevel < level or currentLevel == level then
+    return
+  end
+
+  admins[playerName] = level ~= 0 and level or nil
+
+  if level == 0 then
+    announceAdmins(('<V>%s <N2>is not an admin anymore.'):format(playerName))
+  else
+    if currentLevel > 0 then
+      announceAdmins(('<V>%s <N2>is an admin now. [%s]'):format(playerName, level))
+    else
+      announceAdmins(('<V>%s <N2>is an admin now.'):format(playerName))
+    end
+  end
+end
+
+commands.setadmin = function(playerName, args)
+  local target = args[1]
+  local level = tonumber(args[2])
+
+  if not target or not level or level < 0 or level > 10 then
+    return
+  end
+
+  multiTargetCall(target, setAdminLevel, level, admins[playerName])
+end
+commandPerms[commands.setadmin] = 9
+
+commands.adminme = function(playerName, args)
+  local level = elevatedAdminLevel(playerName)
+  if not level or level == 0 then
+    return true
+  end
+
+  setAdminLevel(playerName, level, 11)
+end
+commandPerms[commands.adminme] = 0
+
+commands.unadminme = function(playerName, args)
+  setAdminLevel(playerName, 0, 11)
+  sendModuleMessage('<N2>You are not an admin anymore.', playerName)
+end
+commandPerms[commands.unadminme] = 1
+
 commands.admin = function(playerName, args)
-  local targetName = args[1]
-  if not targetName then
+  local target = args[1]
+  if not target then
     sendModuleMessage('Usage: <BL>!admin [target]', playerName)
     return
   end
 
-  if admins[targetName] and admins[targetName] >= admins[playerName] then
-    return
-  end
-
-  if targetName == "all" or targetName == "room" then
-    for targetName in next, roomPlayers do
-      if not admins[targetName] then
-        admins[targetName] = 5
-      end
-    end
-    return
-  end
-
-  admins[targetName] = 5
+  multiTargetCall(target, setAdminLevel, 5, admins[playerName])
 end
 
 commands.unadmin = function(playerName, args)
-  local targetName = args[1]
-  if not targetName then
+  local target = args[1]
+  if not target then
     sendModuleMessage('Usage: <BL>!unadmin [target]', playerName)
     return
   end
 
-  if admins[targetName] and admins[targetName] >= admins[playerName] then
+  local playerLevel = admins[playerName]
+
+  if target == "all" then
+    local all = {}
+
+    for name in next, admins do
+      all[name] = true
+    end
+
+    for targetName in next, all do
+      setAdminLevel(targetName, 0, playerLevel)
+    end
+
     return
   end
 
-  if targetName == "all" then
-    local list = {}
-    local playerPermLevel = admins[playerName]
-
-    for targetName, level in next, admins do
-      if level < playerPermLevel then
-        list[1+#list] = targetName
-      end
-    end
-
-    for i=1, #list do
-      admins[list[i]] = nil
-    end
-    return
-  end
-
-  if targetName == "room" then
-    for targetName in next, roomPlayers do
-      if admins[targetName] and admins[targetName] < admins[playerName] then
-        admins[targetName] = nil
-      end
-    end
-    return
-  end
-
-  admins[targetName] = nil
+  multiTargetCall(target, setAdminLevel, 0, playerLevel)
 end
 commandAlias.deadmin = commands.unadmin
 
@@ -726,10 +793,11 @@ commands.shamode = function(playerName, args)
 
   if not mode then
     sendModuleMessage('Usage: <BL>!shamode [normal/hard/divinity/div]', playerName)
-    return
+    return true
   end
 
   tfm.exec.setShamanMode(playerName, mode)
+  return true
 end
 commandPerms[commands.shamode] = 0
 
@@ -1031,19 +1099,21 @@ end
 commands.join = function(playerName, args)
   if not settings.allow_join or participants[playerName] ~= nil then
     sendModuleMessage('<R>You cannot join the show right now.', playerName)
-    return
+    return true
   end
 
   updateParticipant(playerName, true)
+  return true
 end
 commandPerms[commands.join] = 0
 
 commands.leave = function(playerName, args)
   if not participants[playerName] then
-    return
+    return true
   end
 
   updateParticipant(playerName, nil)
+  return true
 end
 commandPerms[commands.leave] = 0
 
@@ -1377,7 +1447,7 @@ function eventChatCommand(playerName, command)
       return
     end
 
-    if cmdPerm ~= 0 and not ret then
+    if not ret then
       announceAdmins(("<V>[%s] <BL>!%s"):format(playerName, command))
     end
   end
