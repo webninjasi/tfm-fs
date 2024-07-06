@@ -1,4 +1,4 @@
-local VERSION = "1.40"
+local VERSION = "1.41"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -26,6 +26,7 @@ local settings = {
   log_npc = false,
   log_admin_joins = false,
   log_participant_joins = false,
+  auto_shaman = false,
 }
 
 local mapName
@@ -113,9 +114,9 @@ end
 local function disableStuff()
   tfm.exec.disableAfkDeath(true)
   tfm.exec.disableAutoScore(true)
-  tfm.exec.disableAutoShaman(true)
   tfm.exec.disableAutoNewGame(true)
   tfm.exec.disableAutoTimeLeft(true)
+  tfm.exec.disableAutoShaman(not settings.auto_shaman)
   tfm.exec.disableAllShamanSkills(not settings.allow_skills)
   tfm.exec.disablePhysicalConsumables(not settings.throwables)
   system.disableChatCommandDisplay(nil, true)
