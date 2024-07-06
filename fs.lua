@@ -1,4 +1,4 @@
-local VERSION = "1.39"
+local VERSION = "1.40"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local admins = {
   ["Mckeydown#0000"] = 10,
@@ -343,7 +343,11 @@ commands.map = function(playerName, args)
   end
 
   if not code and not perm then
-    newRandomMap(doesItMeanReversed(args[1]))
+    if doesItMeanReversed(args[1]) then
+      newRandomMap(true)
+    else
+      sendModuleMessage('Usage: <BL>!map [@code|#perm|reversed] (reversed)', playerName)
+    end
     return
   end
 
