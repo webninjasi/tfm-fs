@@ -1,4 +1,4 @@
-local VERSION = "1.45"
+local VERSION = "1.46"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local DEFAULT_ADMINS = {
   ["Mckeydown#0000"] = 10,
@@ -584,12 +584,12 @@ commands.npc = function(playerName, args)
 
   if not args[1] then
     createNPC(playerName)
-    return settings.log_npc
+    return not settings.log_npc
   end
 
   if args[1] == 'remove' then
     removeNPC(playerName)
-    return settings.log_npc
+    return not settings.log_npc
   end
 
   local look = args[1]
@@ -607,7 +607,7 @@ commands.npc = function(playerName, args)
 
   createNPC(playerName, look, false, visibleFor)
 
-  return settings.log_npc
+  return not settings.log_npc
 end
 commandAlias.dressing = commands.npc
 commandPerms[commands.npc] = 0
