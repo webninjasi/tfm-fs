@@ -1,4 +1,4 @@
-local VERSION = "1.46"
+local VERSION = "1.47"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local DEFAULT_ADMINS = {
   ["Mckeydown#0000"] = 10,
@@ -272,6 +272,22 @@ end
 local function chatMessageList(playerName, list, max, pre)
   for i=1, #list, max do
     tfm.exec.chatMessage(pre .. table.concat(list, ' ', i, math.min(#list, i + max - 1)), playerName)
+  end
+end
+
+local function autoSpawnAndMove(playerName)
+  if bans[playerName] or not settings.auto_respawn then
+    return
+  end
+
+  tfm.exec.respawnPlayer(playerName)
+
+  if settings.auto_cp then
+    local death = deathPosition[playerName]
+
+    if death then
+      tfm.exec.movePlayer(playerName, death.x, death.y)
+    end
   end
 end
 
@@ -1094,8 +1110,8 @@ local function banPlayer(targetName, yes)
   if yes then
     updateParticipant(targetName, false)
     tfm.exec.killPlayer(targetName)
-  elseif settings.auto_respawn then
-    tfm.exec.respawnPlayer(targetName)
+  else
+    autoSpawnAndMove(targetName)
   end
 end
 
@@ -1280,11 +1296,7 @@ function eventNewPlayer(playerName)
     tfm.exec.setWorldGravity(mapWind, mapGravity)
   end
 
-  if not bans[playerName] then
-    if settings.auto_respawn then
-      tfm.exec.respawnPlayer(playerName)
-    end
-  end
+  autoSpawnAndMove(playerName)
 
   for targetName, look in next, playerNPC do
     createNPC(targetName, look, true)
@@ -1353,21 +1365,12 @@ function eventPlayerDied(playerName)
     }
   end
 
-  if not bans[playerName] then
-    if settings.auto_respawn then
-      tfm.exec.respawnPlayer(playerName)
-    end
-  end
+  autoSpawnAndMove(playerName)
 end
 
 function eventPlayerWon(playerName)
   isDead[playerName] = true
-
-  if not bans[playerName] then
-    if settings.auto_respawn then
-      tfm.exec.respawnPlayer(playerName)
-    end
-  end
+  autoSpawnAndMove(playerName)
 end
 
 function eventColorPicked(colorPickerId, playerName, color)
