@@ -1,4 +1,4 @@
-local VERSION = "1.47"
+local VERSION = "1.48"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local DEFAULT_ADMINS = {
   ["Mckeydown#0000"] = 10,
@@ -423,8 +423,13 @@ commands.map = function(playerName, args)
       return
     end
 
-    sendModuleMessage('Usage: <BL>!map [@code|#perm|reversed] (reversed)', playerName)
-    return true
+    if args[1] then
+      sendModuleMessage('Usage: <BL>!map [@code|#perm|reversed] (reversed)', playerName)
+      return true
+    end
+
+    newRandomMap()
+    return
   end
 
   tfm.exec.newGame(code or perm, doesItMeanReversed(args[2]))
