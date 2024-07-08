@@ -1,4 +1,4 @@
-local VERSION = "1.48"
+local VERSION = "1.49"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local DEFAULT_ADMINS = {
   ["Mckeydown#0000"] = 10,
@@ -21,6 +21,7 @@ local settings = {
   allow_npc = false,
   allow_skills = true,
   auto_cp = true,
+  checkpoint = true,
   allow_join = true,
   auto_color = true,
   time_warning = true,
@@ -123,6 +124,7 @@ local function initPlayer(playerName)
   tfm.exec.bindKeyboard(playerName, 16, false, true)
   tfm.exec.bindKeyboard(playerName, 77, true, true)
   tfm.exec.bindKeyboard(playerName, 46, true, true)
+  tfm.exec.bindKeyboard(playerName, 69, true, true)
 
   local currentLevel = admins[playerName] or 0
   local level, auto = elevatedAdminLevel(playerName)
@@ -1359,17 +1361,7 @@ function eventPlayerRespawn(playerName)
 end
 
 function eventPlayerDied(playerName)
-  local player = tfm.get.room.playerList[playerName]
-
   isDead[playerName] = true
-
-  if player then
-    deathPosition[playerName] = {
-      x = player.x,
-      y = player.y,
-    }
-  end
-
   autoSpawnAndMove(playerName)
 end
 
@@ -1405,7 +1397,7 @@ function eventColorPicked(colorPickerId, playerName, color)
   colorTarget[playerName] = nil
 end
 
-function eventKeyboard(playerName, keyCode, down)
+function eventKeyboard(playerName, keyCode, down, x, y)
   if keyCode == 16 then
     holdingShift[playerName] = down
   elseif keyCode == 77 or keyCode == 46 then
@@ -1413,8 +1405,22 @@ function eventKeyboard(playerName, keyCode, down)
       return
     end
 
+    if settings.auto_cp then
+      deathPosition[playerName] = {
+        x = x,
+        y = y,
+      }
+    end
+
     allowMortHotkeyTime[playerName] = os.time() + 500
     tfm.exec.killPlayer(playerName)
+  elseif keyCode == 69 then
+    if settings.checkpoint then
+      deathPosition[playerName] = {
+        x = x,
+        y = y,
+      }
+    end
   end
 end
 
