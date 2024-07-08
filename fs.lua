@@ -1,4 +1,4 @@
-local VERSION = "1.49"
+local VERSION = "1.50"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local DEFAULT_ADMINS = {
   ["Mckeydown#0000"] = 10,
@@ -223,7 +223,7 @@ local function multiTargetCall(targetName, fnc, ...)
     return
   end
 
-  local mouseName = targetName:lower():gsub('^+[a-z]', string.upper)
+  local mouseName = targetName:lower():gsub('^+?[a-z]', string.upper)
 
   if not mouseName:find('#') then
     mouseName = mouseName .. '#0000'
@@ -231,7 +231,7 @@ local function multiTargetCall(targetName, fnc, ...)
 
   if not roomPlayers[mouseName] and #targetName > 2 then
     for name in next, roomPlayers do
-      if name:lower():match(targetName) then
+      if name:lower():match(targetName:lower()) then
         mouseName = name
         break
       end
