@@ -1110,8 +1110,6 @@ local function updateParticipant(playerName, status)
     return
   end
 
-  participants[playerName] = status
-
   if status then
     sendModuleMessage('<V>' .. playerName .. ' <N>has joined the show.', nil)
 
@@ -1119,10 +1117,16 @@ local function updateParticipant(playerName, status)
       sendModuleMessage('You can type <BL>!npc [/dressing code here] <N>to create an NPC wearing a fit you created in /dressing or in external dress room tools.', playerName)
     end
   elseif status == false then
-    sendModuleMessage('<V>' .. playerName .. ' <N>has been removed from the show.', nil)
+    if participants[playerName] then
+      sendModuleMessage('<V>' .. playerName .. ' <N>has been removed from the show.', nil)
+    else
+      sendModuleMessage('<V>' .. playerName .. ' <N>has been banned from the show.', nil)
+    end
   else
     sendModuleMessage('<V>' .. playerName .. ' <N>has left the show.', nil)
   end
+
+  participants[playerName] = status
 
   if settings.auto_color then
     if status then
