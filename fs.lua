@@ -1,4 +1,4 @@
-local VERSION = "1.51"
+local VERSION = "1.52"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local DEFAULT_ADMINS = {
   ["Mckeydown#0000"] = 10,
@@ -574,15 +574,17 @@ local function createNPC(playerName, look, keepPos, visibleFor)
     return
   end
 
-  removeNPC(playerName)
-
   local death = isDead[playerName] and deathPosition[playerName]
   local pos = keepPos and playerNPCPos[playerName] or death or {
     x = player.x,
     y = player.y,
   }
 
-  if not visibleFor then
+  if visibleFor then
+    if visibleFor == playerName then
+      removeNPC(playerName)
+    end
+  else
     playerNPC[playerName] = look
     playerNPCPos[playerName] = pos
   end
@@ -1310,7 +1312,7 @@ function eventNewPlayer(playerName)
   autoSpawnAndMove(playerName)
 
   for targetName, look in next, playerNPC do
-    createNPC(targetName, look, true)
+    createNPC(targetName, look, true, playerName)
   end
 
   if admins[playerName] and settings.log_admin_joins then
