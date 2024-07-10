@@ -1,4 +1,4 @@
-local VERSION = "1.50"
+local VERSION = "1.51"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local DEFAULT_ADMINS = {
   ["Mckeydown#0000"] = 10,
@@ -229,16 +229,20 @@ local function multiTargetCall(targetName, fnc, ...)
     mouseName = mouseName .. '#0000'
   end
 
-  if not roomPlayers[mouseName] and #targetName > 2 then
+  if not roomPlayers[mouseName] then
+    targetName = targetName:lower()
+
     for name in next, roomPlayers do
-      if name:lower():match(targetName:lower()) then
-        mouseName = name
-        break
+      if name:lower():match(targetName) then
+        mouseName = nil
+        fnc(name, ...)
       end
     end
   end
 
-  fnc(mouseName, ...)
+  if mouseName then
+    fnc(mouseName, ...)
+  end
 end
 
 local function updateThemeUI()
