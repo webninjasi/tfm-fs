@@ -37,7 +37,10 @@ local roomPlayers = {}
 local bans = {}
 local participants = {}
 local tpTarget = {}
-local holdingShift = {}
+local holdingKey = {
+  [16] = {}, -- shift
+  [17] = {}, -- ctrl
+}
 local canTeleport = {}
 local playerNPC = {}
 local playerNPCPos = {}
@@ -159,15 +162,25 @@ local function elevatedAdminLevel(playerName)
   return 0
 end
 
+local function autoBind(playerName)
+  local isAdmin = admins[playerName]
+  local isBanned = bans[playerName]
+  local canTp = isAdmin or not isBanned and canTeleport[playerName]
+  canTp = canTp and true or false
+
+  system.bindMouse(playerName, canTp)
+  tfm.exec.bindKeyboard(playerName, 77, true, not isBanned)
+  tfm.exec.bindKeyboard(playerName, 46, true, not isBanned)
+  tfm.exec.bindKeyboard(playerName, 69, true, not isBanned and settings.checkpoint)
+
+  for key in next, holdingKey do
+    tfm.exec.bindKeyboard(playerName, key, true, canTp)
+    tfm.exec.bindKeyboard(playerName, key, false, canTp)
+  end
+end
+
 local function initPlayer(playerName)
   roomPlayers[playerName] = true
-
-  system.bindMouse(playerName, true)
-  tfm.exec.bindKeyboard(playerName, 16, true, true)
-  tfm.exec.bindKeyboard(playerName, 16, false, true)
-  tfm.exec.bindKeyboard(playerName, 77, true, true)
-  tfm.exec.bindKeyboard(playerName, 46, true, true)
-  tfm.exec.bindKeyboard(playerName, 69, true, true)
 
   local currentLevel = admins[playerName] or 0
   local level, auto = elevatedAdminLevel(playerName)
@@ -184,6 +197,8 @@ local function initPlayer(playerName)
       )
     end
   end
+
+  autoBind(playerName)
 end
 
 local function newRandomMap(reversed)
@@ -811,6 +826,7 @@ local function setAdminLevel(playerName, level, compareLevel)
   end
 
   admins[playerName] = level ~= 0 and level or nil
+  autoBind(playerName)
 
   if level == 0 then
     announceAdmins(('<V>%s <N2>is not an admin anymore.'):format(playerName))
@@ -997,6 +1013,7 @@ end
 
 local function setAllowTeleport(playerName, yes)
   canTeleport[playerName] = yes
+  autoBind(playerName)
 end
 
 commands.cantp = function(playerName, args)
@@ -1162,6 +1179,12 @@ commands.settings = function(playerName, args)
   sendModuleMessage(key ..' = ' .. (value and 'yes' or 'no'), playerName)
   disableStuff()
   updateThemeUI()
+
+  if key == 'checkpoints' then
+    for name in next, tfm.get.room.playerList do
+      autoBind(name)
+    end
+  end
 end
 commandAlias.set = commands.settings
 
@@ -1205,6 +1228,7 @@ end
 
 local function banPlayer(targetName, yes)
   bans[targetName] = yes
+  autoBind(targetName)
 
   if yes then
     updateParticipant(targetName, false)
@@ -1498,8 +1522,9 @@ function eventColorPicked(colorPickerId, playerName, color)
 end
 
 function eventKeyboard(playerName, keyCode, down, x, y)
-  if keyCode == 16 then
-    holdingShift[playerName] = down
+  local holding = holdingKey[keyCode]
+  if holding then
+    holding[playerName] = down or nil
   elseif keyCode == 77 or keyCode == 46 then
     if allowMortHotkeyTime[playerName] and os.time() < allowMortHotkeyTime[playerName] then
       return
@@ -1525,7 +1550,7 @@ function eventKeyboard(playerName, keyCode, down, x, y)
 end
 
 function eventMouse(playerName, x, y)
-  if holdingShift[playerName] and (canTeleport[playerName] or admins[playerName]) then
+  if (holdingKey[16][playerName] or holdingKey[17][playerName]) and (canTeleport[playerName] or admins[playerName]) then
     tfm.exec.movePlayer(playerName, x, y)
   end
 
