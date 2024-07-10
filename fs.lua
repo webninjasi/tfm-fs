@@ -764,7 +764,12 @@ end
 commands.pw = function(playerName, args)
   local password = args[-1]
   tfm.exec.setRoomPassword(password)
-  sendModuleMessage('Room password has been changed.', nil)
+
+  if password == "" then
+    sendModuleMessage('Room password has been removed.', nil)
+  else
+    sendModuleMessage('Room password has been changed.', nil)
+  end
 end
 
 commands.grav = function(playerName, args)
