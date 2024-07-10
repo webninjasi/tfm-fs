@@ -1,4 +1,4 @@
-local VERSION = "1.53"
+local VERSION = "1.70"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local DEFAULT_ADMINS = {
   ["Mckeydown#0000"] = 10,
@@ -10,6 +10,7 @@ local maps = {
   7954420,
   7954412,
   7951350,
+  7954520,
 }
 
 local settings = {
