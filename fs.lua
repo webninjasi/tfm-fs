@@ -59,6 +59,7 @@ local timeWarningMessage = 'There is less than 1 minute left...'
 local timeupMessage = 'Time is up!'
 local timeupMessageShown
 local lastMinuteWarningShown
+local throwErrorOnLoop
 
 local lastMapCode
 local loadMapCode, loadMapReversed
@@ -116,8 +117,16 @@ local function getNumberAndString(arg1, arg2)
   return nil, arg1 or arg2
 end
 
+local function sendMultiLineMessages(text, playerName)
+  local message = tostring(text)
+
+  for msg in message:gmatch('[^\r\n]+') do
+    tfm.exec.chatMessage(msg:sub(1, 2000):gsub('<[^>]*$', ''), playerName)
+  end
+end
+
 local function sendModuleMessage(text, playerName)
-  tfm.exec.chatMessage("<BL>[#] <N>" .. tostring(text), playerName)
+  sendMultiLineMessages("<BL>[#] <N>" .. tostring(text), playerName)
 end
 
 local function elevatedAdminLevel(playerName)
@@ -303,7 +312,7 @@ end
 local function announceAdmins(message)
   for adminName in next, admins do
     if roomPlayers[adminName] then
-      tfm.exec.chatMessage(message, adminName)
+      sendMultiLineMessages(message, adminName)
     end
   end
 end
@@ -765,6 +774,15 @@ commands.grav = function(playerName, args)
 end
 commandAlias.gravity = commands.grav
 
+commands.error = function(playerName, args)
+  if args[1] == 'event' then
+    throwErrorOnLoop = args[2] and args[-1]:gsub('^event%s*', '') or "test"
+    return
+  end
+
+  error(args[1] and args[-1] or "test")
+end
+commandPerms[commands.error] = 9
 
 local function setAdminLevel(playerName, level, compareLevel)
   if not playerName or not level or not compareLevel then
@@ -1345,6 +1363,12 @@ function eventLoop(elapsedTime, remainingTime)
     timeupMessageShown = true
     sendModuleMessage('<R>' .. timeupMessage, nil)
   end
+
+  if throwErrorOnLoop then
+    local err = throwErrorOnLoop
+    throwErrorOnLoop = nil
+    error(err)
+  end
 end
 
 function eventNewPlayer(playerName)
@@ -1531,7 +1555,9 @@ function eventChatCommand(playerName, command)
       return
     end
 
-    local ok, ret = pcall(cmd, playerName, args)
+    local ok, ret = xpcall(function()
+      cmd(playerName, args)
+    end, debug.traceback)
     if not ok then
       sendModuleMessage(("<R>Module error on command !%s:\n<BL>%s\n<G>v%s"):format(args[0], tostring(ret), VERSION), playerName)
       return
@@ -1549,7 +1575,7 @@ for eventName, eventFunc in next, _G do
     _G[eventName] = function(...)
       ok, err = pcall(eventFunc, ...)
       if not ok then
-        announceAdmins(("<R>Module error on %s:\n<BL>%s"):format(eventName, tostring(err)))
+        announceAdmins(("<BL>[#] <R>Module error on %s:\n<BL>%s\n<G>v%s"):format(eventName, tostring(err), VERSION))
       end
     end
   end
