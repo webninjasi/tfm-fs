@@ -1571,7 +1571,7 @@ function eventChatCommand(playerName, command)
     end
 
     local ok, ret = xpcall(function()
-      cmd(playerName, args)
+      return cmd(playerName, args)
     end, debug.traceback)
     if not ok then
       sendModuleMessage(("<R>Module error on command !%s:\n<BL>%s\n<G>v%s"):format(args[0], tostring(ret), VERSION), playerName)
