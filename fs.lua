@@ -84,6 +84,26 @@ do
 end
 
 
+local function findLowerStrInArr(str, arr, start, last)
+  if not str then
+    return
+  end
+
+  start = start or 1
+  last = last or #arr
+  str = str:lower()
+
+  for i=start, last do
+    if not arr[i] then
+      return
+    end
+
+    if arr[i] == str then
+      return i
+    end
+  end
+end
+
 local function getNumberAndString(arg1, arg2)
   local num = tonumber(arg1)
   if num then
@@ -592,11 +612,7 @@ local function createNPC(playerName, look, keepPos, visibleFor)
     y = player.y,
   }
 
-  if visibleFor then
-    if visibleFor == playerName then
-      removeNPC(playerName)
-    end
-  else
+  if not visibleFor then
     playerNPC[playerName] = look
     playerNPCPos[playerName] = pos
   end
@@ -614,8 +630,22 @@ end
 commands.removenpc = function(playerName, args)
   multiTargetCall(args[1] or playerName, removeNPC)
 end
-commands.copynpc = function(playerName, args)
-  multiTargetCall(args[1] or playerName, createNPC)
+commands.createnpc = function(playerName, args)
+  if not args[1] then
+    sendModuleMessage('Usage: <BL>!createnpc [Player#1234] (/dressing code) (update|hide)', playerName)
+    return true
+  end
+
+  local look = args[2]
+  local visibleFor = findLowerStrInArr('hide', args, 3) and playerName or nil
+  local keepPos = findLowerStrInArr('update', args, 3) or nil
+
+  local targetPlayer = tfm.get.room.playerList[look]
+  if targetPlayer then
+    look = targetPlayer.look
+  end
+
+  multiTargetCall(args[1], createNPC, look, keepPos, visibleFor)
 end
 commands.npc = function(playerName, args)
   if not admins[playerName] and (not settings.allow_npc or not participants[playerName]) then
@@ -635,7 +665,8 @@ commands.npc = function(playerName, args)
 
   local look = args[1]
   local targetPlayer = tfm.get.room.playerList[look]
-  local visibleFor = args[2] == 'hide' and playerName or nil
+  local visibleFor = findLowerStrInArr('hide', args, 2) and playerName or nil
+  local keepPos = findLowerStrInArr('update', args, 2) or nil
 
   if targetPlayer then
     if not admins[playerName] then
@@ -646,7 +677,7 @@ commands.npc = function(playerName, args)
     look = targetPlayer.look
   end
 
-  createNPC(playerName, look, false, visibleFor)
+  createNPC(playerName, look, keepPos, visibleFor)
 
   return not settings.log_npc
 end
