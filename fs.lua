@@ -83,6 +83,18 @@ do
 end
 
 
+local function getNumberAndString(arg1, arg2)
+  local num = tonumber(arg1)
+  if num then
+    return num, arg2
+  end
+  num = tonumber(arg2)
+  if num then
+    return num, arg1
+  end
+  return nil, arg1 or arg2
+end
+
 local function sendModuleMessage(text, playerName)
   tfm.exec.chatMessage("<BL>[#] <N>" .. tostring(text), playerName)
 end
@@ -481,10 +493,9 @@ commands.time = function(playerName, args)
 end
 
 commands.size = function(playerName, args)
-  local size = tonumber(args[2]) or tonumber(args[1])
-  local target = (args[2] or not size) and args[1] or playerName
+  local size, target = getNumberAndString(args[2], args[1])
   size = size or 1
-
+  target = target or playerName
   multiTargetCall(target, tfm.exec.changePlayerSize, size)
 end
 
