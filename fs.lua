@@ -1287,6 +1287,8 @@ function eventNewGame()
       tfm.exec.killPlayer(playerName)
     end
   end
+
+  tfm.exec.setGameTime(60 * 60)
 end
 
 function eventLoop(elapsedTime, remainingTime)
