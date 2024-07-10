@@ -931,7 +931,7 @@ commands.tpp = function(playerName, args)
 end
 
 local function setAllowTeleport(playerName, yes)
-  canTeleport[targetName] = yes
+  canTeleport[playerName] = yes
 end
 
 commands.cantp = function(playerName, args)
