@@ -462,7 +462,8 @@ commands.map = function(playerName, args)
 
   if args[1] then
     code = args[1]:match('^@?%d+$')
-    perm = args[1]:match('^#%d+$')
+    perm = args[1]:match('^#%d+$') or args[1]:match('^[pP]%d+$')
+    perm = perm and perm:gsub('[pP]', '#')
   end
 
   if not code and not perm then
