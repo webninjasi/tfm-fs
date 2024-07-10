@@ -50,6 +50,7 @@ local playerColor = {}
 local isDead = {}
 local participantsColor = 0xffe249
 local participantOutColor = 0xCB546B
+local themeColor = 0xB2B42E
 local guestColor = 0
 local defaultGravity, defaultWind, mapGravity, mapWind
 local defaultFreeze
@@ -296,7 +297,7 @@ local function updateThemeUI()
     ui.addTextArea(
       666,
       ('<font color="#%.6x">Theme: %s'):format(
-        0xffffff,
+        themeColor,
         currentTheme:gsub('&', '&amp;'):gsub('\\', '\\\\'):gsub('<', '&lt;')
       ),
       nil,
@@ -719,13 +720,21 @@ commands.newtheme = function(playerName, args)
   end
 
   currentTheme = args[-1]
+  local colored = ('<font color="#%.6x">%s'):format(themeColor, currentTheme)
 
   if settings.mapname_theme then
-    mapName = 'Theme: ' .. currentTheme
+    mapName = '<J>Theme: ' .. colored
   end
 
   updateThemeUI()
-  sendModuleMessage('New Theme: <J>' .. currentTheme, nil)
+  sendModuleMessage('New Theme: ' .. colored, nil)
+end
+
+commands.themecolor = function(playerName, args)
+  local color = args[1] and tonumber(args[1], 16) or 0xB2B42E
+
+  themeColor = color
+  updateThemeUI()
 end
 
 commands.theme = function(playerName, args)
