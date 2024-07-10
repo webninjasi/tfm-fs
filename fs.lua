@@ -29,6 +29,7 @@ local settings = {
   log_admin_joins = false,
   log_participant_joins = false,
   auto_shaman = false,
+  allow_minimalist = false,
 }
 
 local mapName
@@ -213,6 +214,7 @@ local function disableStuff()
   tfm.exec.disableAutoShaman(not settings.auto_shaman)
   tfm.exec.disableAllShamanSkills(not settings.allow_skills)
   tfm.exec.disablePhysicalConsumables(not settings.throwables)
+  tfm.exec.disableMinimalistMode(not settings.allow_minimalist)
   system.disableChatCommandDisplay(nil, true)
 end
 
