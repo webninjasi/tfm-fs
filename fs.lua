@@ -1550,12 +1550,25 @@ function eventKeyboard(playerName, keyCode, down, x, y)
 end
 
 function eventMouse(playerName, x, y)
-  if (holdingKey[16][playerName] or holdingKey[17][playerName]) and (canTeleport[playerName] or admins[playerName]) then
+  local holdingShift = holdingKey[16][playerName]
+  local holdingControl = holdingKey[17][playerName]
+  local holdingBoth = holdingShift and holdingControl
+
+  if not holdingBoth and (holdingShift or holdingControl) and (canTeleport[playerName] or admins[playerName]) then
     tfm.exec.movePlayer(playerName, x, y)
   end
 
   if not admins[playerName] then
     return
+  end
+
+  if holdingBoth then
+    for id, obj in next, tfm.get.room.objectList do
+      if math.pow(obj.x - x, 2) + math.pow(obj.y - y, 2) < 250 then
+        tfm.exec.removeObject(id)
+        break
+      end
+    end
   end
 
   if arrowEnabled[playerName] then
