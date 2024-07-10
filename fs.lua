@@ -53,6 +53,7 @@ local participantOutColor = 0xCB546B
 local guestColor = 0
 local defaultGravity, defaultWind, mapGravity, mapWind
 local defaultFreeze
+local isFrozen = {}
 local currentTheme = 'TBD'
 local timeWarningMessage = 'There is less than 1 minute left...'
 local timeupMessage = 'Time is up!'
@@ -982,18 +983,24 @@ commands.unlink = function(playerName, args)
   tfm.exec.linkMice(playerName1, playerName2, false)
 end
 
+local function setFreezeStatus(playerName, status)
+  isFrozen[playerName] = status or nil
+  tfm.exec.freezePlayer(playerName, status)
+end
+
 commands.freeze = function(playerName, args)
   if args[1] == "all" or args[1] == "*" then
     defaultFreeze = true
   end
-  multiTargetCall(args[1] or playerName, tfm.exec.freezePlayer, true)
+  multiTargetCall(args[1] or playerName, setFreezeStatus, true)
 end
 
 commands.unfreeze = function(playerName, args)
   if args[1] == "all" or args[1] == "*" then
     defaultFreeze = false
+    isFrozen = {}
   end
-  multiTargetCall(args[1] or playerName, tfm.exec.freezePlayer, false)
+  multiTargetCall(args[1] or playerName, setFreezeStatus, false)
 end
 
 commands.cheese = function(playerName, args)
@@ -1354,7 +1361,7 @@ end
 function eventPlayerRespawn(playerName)
   isDead[playerName] = nil
 
-  if defaultFreeze then
+  if defaultFreeze or isFrozen[playerName] then
     tfm.exec.freezePlayer(playerName, true, true)
   end
 
