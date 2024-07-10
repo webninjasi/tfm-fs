@@ -1,4 +1,4 @@
-local VERSION = "1.52"
+local VERSION = "1.53"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local DEFAULT_ADMINS = {
   ["Mckeydown#0000"] = 10,
@@ -171,7 +171,7 @@ local function multiTargetCall(targetName, fnc, ...)
   end
 
   local multi = targetName:lower()
-  if multi == 'all' or multi == 'room' then
+  if multi == 'all' or multi == 'room' or multi == '*' then
     for targetName in next, roomPlayers do
       fnc(targetName, ...)
     end
@@ -794,7 +794,7 @@ commands.unadmin = function(playerName, args)
 
   local playerLevel = admins[playerName]
 
-  if target == "all" then
+  if target == "all" or target == "*" then
     local all = {}
 
     for name in next, admins do
@@ -931,7 +931,7 @@ commands.cantp = function(playerName, args)
 
   local yes = args[2] ~= 'no' or nil
 
-  if args[1] == 'all' and not yes then
+  if (args[1] == 'all' or args[1] == '*') and not yes then
     canTeleport = {}
   end
 
@@ -961,7 +961,7 @@ commands.unlink = function(playerName, args)
     return true
   end
 
-  if playerName1 == "all" then
+  if playerName1 == "all" or playerName1 == "*" or playerName1 == "room" then
     for name in next, roomPlayers do
       tfm.exec.linkMice(name, name, false)
     end
@@ -972,14 +972,14 @@ commands.unlink = function(playerName, args)
 end
 
 commands.freeze = function(playerName, args)
-  if args[1] == "all" then
+  if args[1] == "all" or args[1] == "*" then
     defaultFreeze = true
   end
   multiTargetCall(args[1] or playerName, tfm.exec.freezePlayer, true)
 end
 
 commands.unfreeze = function(playerName, args)
-  if args[1] == "all" then
+  if args[1] == "all" or args[1] == "*" then
     defaultFreeze = false
   end
   multiTargetCall(args[1] or playerName, tfm.exec.freezePlayer, false)
@@ -1133,7 +1133,7 @@ commands.ban = function(playerName, args)
 end
 
 commands.unban = function(playerName, args)
-  if args[1] == "all" then
+  if args[1] == "all" or args[1] == "*" then
     bans = {}
   end
 
@@ -1166,7 +1166,7 @@ commands.add = function(playerName, args)
 end
 
 commands.remove = function(playerName, args)
-  if args[1] == "all" then
+  if args[1] == "all" or args[1] == "*" then
     if settings.auto_color then
       for name in next, participants do
         setNameColor(name, guestColor)
