@@ -810,7 +810,7 @@ commands.timewarning = function(playerName, args)
 end
 
 commands.newtheme = function(playerName, args)
-  if args[1] then
+  if not args[1] then
     currentTheme = nil
     updateThemeUI()
     return
@@ -1585,12 +1585,27 @@ end
 function eventPlayerDied(playerName)
   isDead[playerName] = true
 
-  local time = deathTime[playerName]
-  if time and os.time() < time then
-    deathPosition[playerName] = nil
+  if settings.auto_cp then
+    local time = deathTime[playerName]
+    deathTime[playerName] = os.time() + 500
+
+    if time and os.time() < time then
+      deathPosition[playerName] = nil
+    else
+      local death = deathPosition[playerName]
+      if not death or death.timestamp + 1000 < os.time() then
+        local player = tfm.get.room.playerList[playerName]
+        if player then
+          deathPosition[playerName] = {
+            x = player.x,
+            y = player.y,
+            timestamp = os.time(),
+          }
+        end
+      end
+    end
   end
 
-  deathTime[playerName] = os.time() + 500
   autoSpawnAndMove(playerName)
 end
 
@@ -1639,6 +1654,7 @@ function eventKeyboard(playerName, keyCode, down, x, y)
       deathPosition[playerName] = {
         x = x,
         y = y,
+        timestamp = os.time(),
       }
     end
 
