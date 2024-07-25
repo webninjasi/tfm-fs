@@ -25,6 +25,7 @@ local settings = {
   auto_cp = true,
   checkpoint = true,
   allow_join = true,
+  allow_leave = false,
   auto_color = true,
   time_warning = true,
   log_npc = false,
@@ -1343,7 +1344,7 @@ end
 commandPerms[commands.join] = 0
 
 commands.leave = function(playerName, args)
-  if not participants[playerName] then
+  if not participants[playerName] or not settings.allow_leave then
     return true
   end
 
