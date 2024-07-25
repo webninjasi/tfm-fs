@@ -1333,8 +1333,18 @@ end
 commandAlias.unban = commands.unspec
 
 commands.join = function(playerName, args)
-  if not settings.allow_join or participants[playerName] ~= nil then
+  if not settings.allow_join then
     sendModuleMessage('<R>You cannot join the show right now.', playerName)
+    return true
+  end
+
+  if participants[playerName] then
+    sendModuleMessage('<R>You are already a participant in the show.', playerName)
+    return true
+  end
+
+  if participants[playerName] == false then
+    sendModuleMessage('<R>You are removed from the show.', playerName)
     return true
   end
 
@@ -1344,7 +1354,13 @@ end
 commandPerms[commands.join] = 0
 
 commands.leave = function(playerName, args)
-  if not participants[playerName] or not settings.allow_leave then
+  if not participants[playerName] then
+    sendModuleMessage('<R>You are not a participant in the show.', playerName)
+    return true
+  end
+
+  if not settings.allow_leave then
+    sendModuleMessage('<R>You are not allowed to change your participant status in the show.', playerName)
     return true
   end
 
