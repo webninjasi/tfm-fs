@@ -417,8 +417,8 @@ local function autoSpawnAndMove(playerName)
   tfm.exec.respawnPlayer(playerName)
 
   if settings.checkpoint or settings.auto_cp then
-    local pos = settings.checkpoint and spawnPosition[playerName]
-             or settings.auto_cp and deathPosition[playerName]
+    local pos = settings.auto_cp and deathPosition[playerName]
+             or settings.checkpoint and spawnPosition[playerName]
     if pos then
       tfm.exec.movePlayer(playerName, pos.x, pos.y)
     end
@@ -713,7 +713,7 @@ local function createNPC(playerName, look, keepPos, visibleFor)
     return
   end
 
-  local death = isDead[playerName] and (spawnPosition[playerName] or deathPosition[playerName])
+  local death = isDead[playerName] and (deathPosition[playerName] or spawnPosition[playerName])
   local pos = keepPos and playerNPCPos[playerName] or death or {
     x = player.x,
     y = player.y,
@@ -1574,8 +1574,8 @@ function eventPlayerRespawn(playerName)
   end
 
   if settings.checkpoint or settings.auto_cp then
-    local pos = settings.checkpoint and spawnPosition[playerName]
-             or settings.auto_cp and deathPosition[playerName]
+    local pos = settings.auto_cp and deathPosition[playerName]
+             or settings.checkpoint and spawnPosition[playerName]
     if pos then
       tfm.exec.movePlayer(playerName, pos.x, pos.y)
     end
