@@ -34,6 +34,48 @@ local settings = {
   allow_minimalist = false,
 }
 
+local mapCategories = {
+  ['vanilla'] = { color = '<ROSE>', name = "Vanilla" },
+  ['P?'] = { color = '<G>', name = "Unknown" },
+  ['P0'] = { color = '<N>', name = "Standard" },
+  ['P1'] = { color = '<J>', name = "Protection" },
+  ['P2'] = { color = '<J>', name = "Prime" },
+  ['P3'] = { color = '<VP>', name = "Prime Bootcamp" },
+  ['P4'] = { color = '<VP>', name = "Shaman" },
+  ['P5'] = { color = '<VP>', name = "Art" },
+  ['P6'] = { color = '<VP>', name = "Mechanism" },
+  ['P7'] = { color = '<VP>', name = "No Shaman" },
+  ['P8'] = { color = '<VP>', name = "Dual Shaman" },
+  ['P9'] = { color = '<VP>', name = "Miscellaneous" },
+  ['P10'] = { color = '<VP>', name = "Survivor" },
+  ['P11'] = { color = '<VP>', name = "Vampire Survivor" },
+  ['P13'] = { color = '<VP>', name = "Bootcamp" },
+  ['P17'] = { color = '<VP>', name = "Racing" },
+  ['P18'] = { color = '<VP>', name = "Defilante" },
+  ['P19'] = { color = '<VP>', name = "Music" },
+  ['P20'] = { color = '<BV>', name = "Survivor Test" },
+  ['P21'] = { color = '<BV>', name = "Vampire Survivor Test" },
+  ['P22'] = { color = '<CEP>', name = "Tribe House" },
+  ['P23'] = { color = '<BV>', name = "Bootcamp Test" },
+  ['P24'] = { color = '<VP>', name = "Dual Shaman Survivor" },
+  ['P32'] = { color = '<BV>', name = "Dual Shaman Test" },
+  ['P34'] = { color = '<BV>', name = "Dual Shaman Survivor Test" },
+  ['P38'] = { color = '<BV>', name = "Racing Test" },
+  ['P41'] = { color = '<CH>', name = "Module" },
+  ['P42'] = { color = '<BV>', name = "No Shaman Test" },
+  ['P43'] = { color = '<R>', name = "Deleted (Inappropriate)" },
+  ['P44'] = { color = '<R>', name = "Deleted" },
+  ['P60'] = { color = '<CE>', name = "Thematic" },
+  ['P66'] = { color = '<CE>', name = "Thematic" },
+  ['P87'] = { color = '<ROSE>', name = "User-Made Vanilla" },
+}
+local mapInfo = {
+  code = tfm.get.room.currentMap,
+  author = "???",
+  perm = 'P?',
+  fakeauthor = nil,
+  title = nil,
+}
 local mapName
 local backgroundColor
 local roomPlayers = {}
@@ -70,7 +112,6 @@ local timeupMessageShown
 local lastMinuteWarningShown
 local throwErrorOnLoop
 
-local lastMapCode
 local loadMapCode, loadMapReversed
 
 do
@@ -309,10 +350,32 @@ local function multiTargetCall(targetName, fnc, ...)
   end
 end
 
-local function updateThemeUI()
-  if settings.mapname_theme and mapName then
+local function setMapName()
+  if mapName then
     ui.setMapName(mapName)
+    return
   end
+
+  if settings.mapname_theme then
+    ui.setMapName(('Theme: <font color="#%.6x">%s'):format(themeColor, currentTheme))
+    return
+  end
+
+  if mapInfo.title then
+    ui.setMapName(mapInfo.title)
+    return
+  end
+
+  if mapInfo.author then
+    ui.setMapName(('%s <BL>- %s'):format(mapInfo.author, mapInfo.code))
+    return
+  end
+
+  ui.setMapName(mapInfo.code)
+end
+
+local function updateThemeUI()
+  setMapName()
 
   if settings.theme_ui then
     ui.addTextArea(
@@ -399,7 +462,19 @@ end
 commandPerms[commands.help] = 0
 
 commands.mapinfo = function(playerName, args)
-  sendModuleMessage(tostring(lastMapCode), playerName)
+  local perm = mapCategories[mapInfo.perm] or mapCategories['P?']
+  local title = mapInfo.title
+  if title then
+    title = ' <G>- ' .. title:gsub('<', ''):gsub('&', '')
+  end
+  sendModuleMessage(('<J>%s <BL>- %s - %s - %s%s%s'):format(
+    mapInfo.author,
+    mapInfo.code,
+    mapInfo.perm,
+    perm.color,
+    perm.name,
+    title or ''
+  ), playerName)
   return true
 end
 commandPerms[commands.mapinfo] = 0
@@ -601,13 +676,11 @@ end
 commands.mapname = function(playerName, args)
   if args[1] then
     mapName = args[-1]
-    ui.setMapName(mapName)
   else
     mapName = nil
-
-    local info = tfm.get.room.xmlMapInfo
-    ui.setMapName(info and ('%s <BL>- %s'):format(info.author, tfm.get.room.currentMap) or tfm.get.room.currentMap)
   end
+
+  setMapName()
 end
 
 local function removeNPC(playerName)
@@ -736,20 +809,19 @@ commands.timewarning = function(playerName, args)
 end
 
 commands.newtheme = function(playerName, args)
-  if not args[1] then
-    sendModuleMessage('Usage: <BL>!newtheme [theme]', playerName)
-    return true
+  if args[1] then
+    currentTheme = nil
+    updateThemeUI()
+    return
+  end
+
+  if settings.mapname_theme then
+    mapName = nil
   end
 
   currentTheme = args[-1]
-  local colored = ('<font color="#%.6x">%s'):format(themeColor, currentTheme)
-
-  if settings.mapname_theme then
-    mapName = '<J>Theme: ' .. colored
-  end
-
   updateThemeUI()
-  sendModuleMessage('New Theme: ' .. colored, nil)
+  sendModuleMessage(('New Theme: <font color="#%.6x">%s'):format(themeColor, currentTheme), nil)
 end
 
 commands.themecolor = function(playerName, args)
@@ -1359,22 +1431,27 @@ function eventNewGame()
   playerNPCPos = {}
   isDead = {}
 
-  if lastMapCode ~= tfm.get.room.currentMap then
+  local code = tfm.get.room.currentMap
+  if mapInfo.code ~= code then
     spawnPosition = {}
     deathPosition = {}
   end
 
   local info = tfm.get.room.xmlMapInfo
-  if info and info.xml then
-    local xml = info.xml
-    local properties = info.xml:match('<P( .-)/>')
-
+  if info then
     if info.author ~= '#Module' then
-      lastMapCode = tfm.get.room.currentMap
+      mapInfo = {
+        code = code,
+        author = info.author,
+        perm = 'P' .. info.permCode,
+      }
     end
 
+    local xml = info.xml
+    local properties = xml and xml:match('<P( .-)/>')
+
     if properties then
-      if info.author ~= '#Module' and properties:find(' reload=""') then
+      if info.author ~= '#Module' and properties:find(' reload="[^"]*"') then
         tfm.exec.newGame(xml, tfm.get.room.mirroredMap)
       else
         local wind, gravity = properties:match(' G="(.-),(.-)"')
@@ -1383,12 +1460,24 @@ function eventNewGame()
 
         backgroundColor = properties:match(' bgcolor="(.-)"') or backgroundColor
         ui.setBackgroundColor(backgroundColor)
+
+        local author = properties:match(' author="(.-)"')
+        if author then
+          mapInfo.fakeauthor = author
+        end
+
+        local title = properties:match(' title="(.-)"')
+        if title then
+          mapInfo.title = title
+        end
       end
     end
-  end
-
-  if mapName then
-    ui.setMapName(mapName)
+  else
+    mapInfo = {
+      code = code,
+      author = 'Transformice',
+      perm = 'vanilla',
+    }
   end
 
   for playerName in next, roomPlayers do
@@ -1397,6 +1486,7 @@ function eventNewGame()
     end
   end
 
+  setMapName()
   tfm.exec.setGameTime(60 * 60)
 end
 
@@ -1427,10 +1517,7 @@ function eventNewPlayer(playerName)
     ui.setBackgroundColor(backgroundColor)
   end
 
-  if mapName then
-    ui.setMapName(mapName)
-  end
-
+  setMapName()
   updateThemeUI()
 
   if mapWind and mapGravity then
