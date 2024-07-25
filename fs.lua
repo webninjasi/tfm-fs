@@ -944,9 +944,9 @@ end
 commandPerms[commands.shamode] = 0
 
 commands.score = function(playerName, args)
-  local score = tonumber(args[2]) or tonumber(args[1])
-  local target = (args[2] or not score) and args[1] or playerName
+  local score, target = getNumberAndString(args[2], args[1])
   score = score or 0
+  target = target or playerName
   multiTargetCall(target, tfm.exec.setPlayerScore, score, false)
 end
 
