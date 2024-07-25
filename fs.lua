@@ -48,7 +48,9 @@ local playerNPC = {}
 local playerNPCPos = {}
 local arrowEnabled = {}
 local arrowAllowTime = {}
+local spawnPosition = {}
 local deathPosition = {}
+local deathTime = {}
 local colorTarget = {}
 local allowMortHotkeyTime = {}
 local playerColor = {}
@@ -349,11 +351,11 @@ local function autoSpawnAndMove(playerName)
 
   tfm.exec.respawnPlayer(playerName)
 
-  if settings.auto_cp then
-    local death = deathPosition[playerName]
-
-    if death then
-      tfm.exec.movePlayer(playerName, death.x, death.y)
+  if settings.checkpoint or settings.auto_cp then
+    local pos = settings.checkpoint and spawnPosition[playerName]
+             or settings.auto_cp and deathPosition[playerName]
+    if pos then
+      tfm.exec.movePlayer(playerName, pos.x, pos.y)
     end
   end
 end
@@ -635,7 +637,7 @@ local function createNPC(playerName, look, keepPos, visibleFor)
     return
   end
 
-  local death = isDead[playerName] and deathPosition[playerName]
+  local death = isDead[playerName] and (spawnPosition[playerName] or deathPosition[playerName])
   local pos = keepPos and playerNPCPos[playerName] or death or {
     x = player.x,
     y = player.y,
@@ -1183,7 +1185,7 @@ commands.settings = function(playerName, args)
   disableStuff()
   updateThemeUI()
 
-  if key == 'checkpoints' then
+  if key == 'checkpoint' then
     for name in next, tfm.get.room.playerList do
       autoBind(name)
     end
@@ -1354,6 +1356,7 @@ function eventNewGame()
   isDead = {}
 
   if lastMapCode ~= tfm.get.room.currentMap then
+    spawnPosition = {}
     deathPosition = {}
   end
 
@@ -1451,6 +1454,7 @@ function eventPlayerLeft(playerName)
   colorTarget[playerName] = nil
   allowMortHotkeyTime[playerName] = nil
   arrowAllowTime[playerName] = nil
+  deathTime[playerName] = nil
 
   if admins[playerName] and settings.log_admin_joins then
     announceAdmins(('<N2>• <V>%s <N2>has left the room.'):format(playerName))
@@ -1478,17 +1482,24 @@ function eventPlayerRespawn(playerName)
     end
   end
 
-  if settings.auto_cp then
-    local death = deathPosition[playerName]
-    
-    if death then
-      tfm.exec.movePlayer(playerName, death.x, death.y)
+  if settings.checkpoint or settings.auto_cp then
+    local pos = settings.checkpoint and spawnPosition[playerName]
+             or settings.auto_cp and deathPosition[playerName]
+    if pos then
+      tfm.exec.movePlayer(playerName, pos.x, pos.y)
     end
   end
 end
 
 function eventPlayerDied(playerName)
   isDead[playerName] = true
+
+  local time = deathTime[playerName]
+  if time and os.time() < time then
+    deathPosition[playerName] = nil
+  end
+
+  deathTime[playerName] = os.time() + 500
   autoSpawnAndMove(playerName)
 end
 
@@ -1544,7 +1555,7 @@ function eventKeyboard(playerName, keyCode, down, x, y)
     tfm.exec.killPlayer(playerName)
   elseif keyCode == 69 then
     if settings.checkpoint then
-      deathPosition[playerName] = {
+      spawnPosition[playerName] = {
         x = x,
         y = y,
       }
