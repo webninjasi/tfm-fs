@@ -467,16 +467,17 @@ commands.admins = function(playerName, args)
 end
 commandPerms[commands.admins] = 0
 
-commands.bans = function(playerName, args)
+commands.spectators = function(playerName, args)
   local list = {}
   for name in next, bans do
     list[1 + #list] = name
   end
-  sendModuleMessage("Ban list:", playerName)
+  sendModuleMessage("Spectators:", playerName)
   chatMessageList(playerName, list, 10, '<V>')
   return true
 end
-commandAlias.banlist = commands.bans
+commandAlias.banlist = commands.spectators
+commandAlias.bans = commands.spectators
 
 commands.map = function(playerName, args)
   local code, perm
@@ -1243,17 +1244,19 @@ local function banPlayer(targetName, yes)
   end
 end
 
-commands.ban = function(playerName, args)
-  multiTargetCall(args[1], banPlayer, true)
+commands.spec = function(playerName, args)
+  multiTargetCall(args[1] or playerName, banPlayer, true)
 end
+commandAlias.ban = commands.spec
 
-commands.unban = function(playerName, args)
+commands.unspec = function(playerName, args)
   if args[1] == "all" or args[1] == "*" then
     bans = {}
   end
 
-  multiTargetCall(args[1], banPlayer, nil)
+  multiTargetCall(args[1] or playerName, banPlayer, nil)
 end
+commandAlias.unban = commands.unspec
 
 commands.join = function(playerName, args)
   if not settings.allow_join or participants[playerName] ~= nil then
