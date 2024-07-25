@@ -367,8 +367,8 @@ local function setMapName()
     return
   end
 
-  if mapInfo.author then
-    ui.setMapName(('%s <BL>- %s'):format(mapInfo.author, mapInfo.code))
+  if mapInfo.fakeauthor or mapInfo.author then
+    ui.setMapName(('%s <BL>- %s'):format(mapInfo.fakeauthor or mapInfo.author, mapInfo.code))
     return
   end
 
@@ -469,7 +469,7 @@ commands.mapinfo = function(playerName, args)
     title = ' <G>- ' .. title:gsub('<', ''):gsub('&', '')
   end
   sendModuleMessage(('<J>%s <BL>- %s - %s - %s%s%s'):format(
-    mapInfo.author,
+    mapInfo.author or 'Transformice',
     mapInfo.code,
     mapInfo.perm,
     perm.color,
@@ -1476,7 +1476,6 @@ function eventNewGame()
   else
     mapInfo = {
       code = code,
-      author = 'Transformice',
       perm = 'vanilla',
     }
   end
