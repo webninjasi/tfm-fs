@@ -106,7 +106,7 @@ local guestColor = 0
 local defaultGravity, defaultWind, mapGravity, mapWind
 local defaultFreeze
 local isFrozen = {}
-local currentTheme = 'TBD'
+local currentTheme
 local timeWarningMessage = 'There is less than 1 minute left...'
 local timeupMessage = 'Time is up!'
 local timeupMessageShown
@@ -357,7 +357,7 @@ local function setMapName()
     return
   end
 
-  if settings.mapname_theme then
+  if settings.mapname_theme and currentTheme then
     ui.setMapName(('Theme: <font color="#%.6x">%s'):format(themeColor, currentTheme))
     return
   end
@@ -378,7 +378,7 @@ end
 local function updateThemeUI()
   setMapName()
 
-  if settings.theme_ui then
+  if settings.theme_ui and currentTheme then
     ui.addTextArea(
       666,
       ('<font color="#%.6x">Theme: %s'):format(
@@ -833,7 +833,7 @@ commands.themecolor = function(playerName, args)
 end
 
 commands.theme = function(playerName, args)
-  sendModuleMessage('Theme: ' .. currentTheme, playerName)
+  sendModuleMessage('Theme: ' .. (currentTheme or 'TBD'), playerName)
   return true
 end
 commandPerms[commands.theme] = 0
