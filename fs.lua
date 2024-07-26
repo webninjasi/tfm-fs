@@ -1311,7 +1311,6 @@ local function banPlayer(targetName, yes)
   autoBind(targetName)
 
   if yes then
-    updateParticipant(targetName, false)
     tfm.exec.killPlayer(targetName)
   else
     autoSpawnAndMove(targetName)
