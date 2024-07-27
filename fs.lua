@@ -1,4 +1,4 @@
-local VERSION = "1.70"
+local VERSION = "1.83"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local DEFAULT_ADMINS = {
   ["Mckeydown#0000"] = 10,
