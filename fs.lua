@@ -248,8 +248,27 @@ local function initPlayer(playerName)
   autoBind(playerName)
 end
 
+local function randomizeMapOrder()
+  local index2
+  for index=1, maps._len do
+    index2 = math.random(maps._len)
+    maps[index], maps[index2] = maps[index2], maps[index]
+  end
+end
+
+do
+  maps._index = 1
+  maps._len = #maps
+  randomizeMapOrder()
+end
+
 local function newRandomMap(reversed)
-  tfm.exec.newGame(maps[math.random(1, #maps)], reversed)
+  tfm.exec.newGame(maps[maps._index], reversed)
+  maps._index = maps._index + 1
+  if maps._index > maps._len then
+    maps._index = 1
+    randomizeMapOrder()
+  end
 end
 
 local function disableStuff()
