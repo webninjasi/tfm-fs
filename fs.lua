@@ -88,6 +88,7 @@ local holdingKey = {
   [17] = {}, -- ctrl
 }
 local callOnClick = {}
+local callOnColor = {}
 local canTeleport = {}
 local playerNPC = {}
 local playerNPCPos = {}
@@ -96,7 +97,6 @@ local arrowAllowTime = {}
 local spawnPosition = {}
 local deathPosition = {}
 local deathTime = {}
-local colorTarget = {}
 local allowMortHotkeyTime = {}
 local playerColor = {}
 local isDead = {}
@@ -503,6 +503,14 @@ local function autoSpawnAndMove(playerName)
   end
 end
 
+local function showColorPicker(playerName, text, defaultColor, callback)
+  if not playerName then
+    return
+  end
+
+  callOnColor[playerName] = callback
+  ui.showColorPicker(444, playerName, defaultColor, text)
+end
 
 local commands = {}
 local commandAlias = {}
@@ -739,8 +747,19 @@ commands.color = function(playerName, args)
 
     multiTargetCall(target, setNameColor, color)
   else
-    colorTarget[playerName] = target or playerName
-    ui.showColorPicker(444, playerName, 0, "Pick a name color:")
+    target = target or playerName
+    showColorPicker(playerName, "Pick a name color:", 0, function(playerName, color)
+      if target == 'participants' or target == 'in' then
+        participantsColor = color
+      elseif target == 'out' then
+        participantOutColor = color
+      elseif target == 'guest' then
+        guestColor = color
+      end
+  
+      multiTargetCall(target, setNameColor, color)
+      announceAdmins(("<V>[%s] <BL>!color %s %.6x"):format(playerName, target, color))
+    end)
     return true
   end
 end
@@ -934,9 +953,21 @@ commands.rules = function(playerName, args)
     end
 
   elseif args[1] == 'style' then
-    if not args[2] or onscreenRules.style[args[2]] == nil or not args[3] then
+    if not args[2] or onscreenRules.style[args[2]] == nil or (not args[3] and args[2] ~= 'color') then
       sendModuleMessage('Change rules ui style or position: <BL>!rules style x/y/color/opacity/width/height [value]', playerName)
       return true
+    end
+
+    if args[2] == 'color' then
+      if args[3] then
+        args[3] = tonumber(args[3], 16)
+      else
+        showColorPicker(playerName, "Pick a background color for rules:", onscreenRules.style.color, function(playerName, color)
+          onscreenRules.style.color = color
+          updateOnscreenRules()
+        end)
+        return
+      end
     end
 
     if (args[2] == 'width' or args[2] == 'height') and args[3] == '-' then
@@ -972,8 +1003,15 @@ commands.newtheme = function(playerName, args)
 end
 
 commands.themecolor = function(playerName, args)
-  local color = args[1] and tonumber(args[1], 16) or 0xB2B42E
+  if not args[1] then
+    showColorPicker(playerName, "Pick a theme color:", themeColor, function(playerName, color)
+      themeColor = color
+      updateThemeUI()
+    end)
+    return
+  end
 
+  local color = tonumber(args[1], 16) or 0xB2B42E
   themeColor = color
   updateThemeUI()
 end
@@ -1578,7 +1616,15 @@ commands.group = function(playerName, args)
 end
 
 commands.bgcolor = function(playerName, args)
-  backgroundColor = args[1] and ("#" .. args[1]) or nil
+  if not args[1] then
+    showColorPicker(playerName, "Pick a background color:", backgroundColor or 0, function(playerName, color)
+      backgroundColor = ('#%.6x'):format(color)
+      ui.setBackgroundColor(backgroundColor)
+    end)
+    return
+  end
+
+  backgroundColor = args[1] ~= '-' and args[1] ~= 'none' and ("#" .. args[1]) or nil
   ui.setBackgroundColor(backgroundColor)
 end
 
@@ -1704,10 +1750,11 @@ function eventPlayerLeft(playerName)
   roomPlayers[playerName] = nil
   tpTarget[playerName] = nil
   arrowEnabled[playerName] = nil
-  colorTarget[playerName] = nil
   allowMortHotkeyTime[playerName] = nil
   arrowAllowTime[playerName] = nil
   deathTime[playerName] = nil
+  callOnClick[playerName] = nil
+  callOnColor[playerName] = nil
 
   if admins[playerName] and settings.log_admin_joins then
     announceAdmins(('<N2>• <V>%s <N2>has left the room.'):format(playerName))
@@ -1777,30 +1824,21 @@ function eventPlayerWon(playerName)
 end
 
 function eventColorPicked(colorPickerId, playerName, color)
-  if not admins[playerName] or not colorTarget[playerName] then
-    return
-  end
-
   if colorPickerId ~= 444 then
     return
   end
 
-  if color ~= -1 then
-    local target = colorTarget[playerName]
-
-    if target == 'participants' or target == 'in' then
-      participantsColor = color
-    elseif target == 'out' then
-      participantOutColor = color
-    elseif target == 'guest' then
-      guestColor = color
-    end
-
-    multiTargetCall(target, setNameColor, color)
-    announceAdmins(("<V>[%s] <BL>!color %s %.6x"):format(playerName, target, color))
+  if not admins[playerName] then
+    return
   end
 
-  colorTarget[playerName] = nil
+  if color ~= -1 then
+    local callback = callOnColor[playerName]
+    if callback then
+      callback(playerName, color)
+      callOnColor[playerName] = nil
+    end
+  end
 end
 
 function eventKeyboard(playerName, keyCode, down, x, y)
