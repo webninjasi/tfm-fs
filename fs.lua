@@ -1417,14 +1417,40 @@ commands.clear = function(playerName, args)
   end
 end
 
+local function sortedSettingList()
+  local list = {}
+  for key in next, settings do
+    list[1 + #list] = key
+  end
+  table.sort(list)
+  return list
+end
+
+local function updateSettingsUI(playerName)
+  local list = sortedSettingList()
+  for i=1, #list do
+    list[i] = ('<%s><a href="event:%s">%s = %s</a>'):format(
+      settings[list[i]] and 'VP' or 'R',
+      list[i],
+      list[i]:gsub('_', ' '),
+      settings[list[i]] and 'yes' or 'no'
+    )
+  end
+  list[1 + #list] = '\n<R><a href="event:close">[close]</a>'
+
+  local text = table.concat(list, '\n')
+  ui.addTextArea(999, text, playerName, 200, 50, nil, nil, 1, 1, 0.9, true)
+end
+
 commands.settings = function(playerName, args)
   local key = args[1]
-  if not key or settings[key] == nil then
-    local list = {}
-    for key in next, settings do
-      list[1 + #list] = key
-    end
-    table.sort(list)
+  if not key then
+    updateSettingsUI(playerName)
+    return
+  end
+
+  if settings[key] == nil then
+    local list = sortedSettingList()
     sendModuleMessage('Available settings:', playerName)
     for i=1, #list do
       tfm.exec.chatMessage(('%s = %s'):format(list[i], settings[list[i]] and 'yes' or 'no'), playerName)
@@ -1951,9 +1977,27 @@ function eventChatCommand(playerName, command)
 end
 
 function eventTextAreaCallback(textAreaId, playerName, eventName)
-  if textAreaId == 111 and eventName == 'rules' then
-    onscreenRules.hide[playerName] = not onscreenRules.hide[playerName]
-    updateOnscreenRules(playerName)
+  if textAreaId == 111 then
+    if eventName == 'rules' then
+      onscreenRules.hide[playerName] = not onscreenRules.hide[playerName]
+      updateOnscreenRules(playerName)
+    end
+    return
+  elseif textAreaId == 999 then
+    if eventName == 'close' then
+      return ui.removeTextArea(textAreaId, playerName)
+    end
+
+    if not admins[playerName] then
+      return
+    end
+
+    if settings[eventName] == nil then
+      return
+    end
+
+    settings[eventName] = not settings[eventName]
+    updateSettingsUI(playerName)
   end
 end
 
