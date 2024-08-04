@@ -87,6 +87,7 @@ local holdingKey = {
   [16] = {}, -- shift
   [17] = {}, -- ctrl
 }
+local callOnClick = {}
 local canTeleport = {}
 local playerNPC = {}
 local playerNPCPos = {}
@@ -916,6 +917,13 @@ commands.rules = function(playerName, args)
       updateOnscreenRules()
     end
 
+  elseif args[1] == 'move' then
+    callOnClick[playerName] = function(playerName, x, y)
+      onscreenRules.style.x = x
+      onscreenRules.style.y = y
+      updateOnscreenRules()
+    end
+
   elseif args[1] == 'style' then
     if not args[2] or onscreenRules.style[args[2]] == nil or not args[3] then
       sendModuleMessage('Change rules ui style or position: <BL>!rules style x/y/color/opacity/width/height [value]', playerName)
@@ -933,7 +941,7 @@ commands.rules = function(playerName, args)
     updateOnscreenRules()
 
   else
-    sendModuleMessage('Manage rules: <BL>!rules add/remove/hide/show/style', playerName)
+    sendModuleMessage('Manage rules: <BL>!rules add/remove/hide/show/move/style', playerName)
     return true
   end
 end
@@ -1819,6 +1827,13 @@ function eventMouse(playerName, x, y)
   local holdingShift = holdingKey[16][playerName]
   local holdingControl = holdingKey[17][playerName]
   local holdingBoth = holdingShift and holdingControl
+
+  -- for now only admins can trigger this so no need to configure bind yet
+  local callback = callOnClick[playerName]
+  if callback then
+    callback(playerName, x, y)
+    callOnClick[playerName] = nil
+  end
 
   if not holdingBoth and (holdingShift or holdingControl) and (canTeleport[playerName] or admins[playerName]) then
     tfm.exec.movePlayer(playerName, x, y)
