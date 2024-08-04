@@ -193,8 +193,8 @@ local function sendModuleMessage(text, playerName)
   sendMultiLineMessages("<BL>[#] <N>" .. tostring(text), playerName)
 end
 
-local function elevatedAdminLevel(playerName)
-  if DEFAULT_ADMINS[playerName] then
+local function elevatedAdminLevel(playerName, initial)
+  if not initial and DEFAULT_ADMINS[playerName] then
     return DEFAULT_ADMINS[playerName]
   end
 
@@ -215,8 +215,17 @@ local function elevatedAdminLevel(playerName)
     local tribeName = room.name:sub(3)
 
     if player and room.isTribeHouse and player.tribeName == tribeName then
-      return 6
+      local playerCount = 0
+      for _ in next, room.playerList do
+        playerCount = 1 + playerCount
+      end
+
+      return 6, playerCount == 1
     end
+  end
+
+  if DEFAULT_ADMINS[playerName] then
+    return DEFAULT_ADMINS[playerName]
   end
 
   return 0
@@ -243,7 +252,7 @@ local function initPlayer(playerName)
   roomPlayers[playerName] = true
 
   local currentLevel = admins[playerName] or 0
-  local level, auto = elevatedAdminLevel(playerName)
+  local level, auto = elevatedAdminLevel(playerName, true)
 
   eventChatCommand(playerName, "help")
 
