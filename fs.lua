@@ -112,6 +112,18 @@ local timeupMessage = 'Time is up!'
 local timeupMessageShown
 local lastMinuteWarningShown
 local throwErrorOnLoop
+local onscreenRules = {
+  _len=0,
+  show = true,
+  hide = {},
+  style = {
+    x = 0, y = 30,
+    color = 1,
+    opacity = 0.8,
+    width = false,
+    height = false,
+  }
+}
 
 local loadMapCode, loadMapReversed
 
@@ -411,6 +423,43 @@ local function updateThemeUI()
     )
   else
     ui.removeTextArea(666, nil)
+  end
+end
+
+local function updateOnscreenRules(playerName, _text)
+  if not onscreenRules.show or onscreenRules._len == 0 then
+    ui.removeTextArea(111, playerName)
+    return
+  end
+
+  if _text then
+    return ui.addTextArea(
+      111,
+      _text,
+      playerName,
+      onscreenRules.style.x, onscreenRules.style.y,
+      onscreenRules.style.width, onscreenRules.style.height,
+      onscreenRules.style.color, onscreenRules.style.color,
+      onscreenRules.style.opacity, false
+    )
+  elseif playerName and onscreenRules.hide[playerName] then
+    return updateOnscreenRules(playerName, '<a href="event:rules"><b>RULES')
+  end
+
+  local text = { '<a href="event:rules"><b>RULES</b></a>' }
+  for i=1, onscreenRules._len do
+    text[i + 1] = ('<b>%s.</b> %s'):format(i, onscreenRules[i])
+  end
+
+  text = table.concat(text, '\n')
+  text = text:sub(1, 2000)
+
+  if playerName then
+    updateOnscreenRules(playerName, text)
+  else
+    for playerName in next, roomPlayers do
+      updateOnscreenRules(playerName, (not onscreenRules.hide[playerName]) and text or nil)
+    end
   end
 end
 
@@ -826,6 +875,67 @@ commands.timewarning = function(playerName, args)
   end
 
   timeWarningMessage = args[-1]
+end
+
+commands.rules = function(playerName, args)
+  if args[1] == 'add' then
+    if not args[2] then
+      sendModuleMessage('Add new rule: <BL>!rules add [text]', playerName)
+      return true
+    end
+
+    onscreenRules._len = 1 + onscreenRules._len
+    onscreenRules[onscreenRules._len] = table.concat(args, ' ', 2, #args)
+    updateOnscreenRules()
+
+  elseif args[1] == 'remove' then
+    if not args[2] then
+      sendModuleMessage('Remove a rule: <BL>!rules remove [line number]', playerName)
+      return true
+    end
+
+    local index = tonumber(args[2])
+    if not index or index < 1 or index > onscreenRules._len or onscreenRules._len == 0 then
+      sendModuleMessage('Remove a rule: <BL>!rules remove [line number]', playerName)
+      return true
+    end
+
+    onscreenRules._len = onscreenRules._len - 1
+    table.remove(onscreenRules, index)
+    updateOnscreenRules()
+
+  elseif args[1] == 'hide' then
+    if onscreenRules.show then
+      onscreenRules.show = false
+      updateOnscreenRules()
+    end
+
+  elseif args[1] == 'show' then
+    if not onscreenRules.show then
+      onscreenRules.show = true
+      updateOnscreenRules()
+    end
+
+  elseif args[1] == 'style' then
+    if not args[2] or onscreenRules.style[args[2]] == nil or not args[3] then
+      sendModuleMessage('Change rules ui style or position: <BL>!rules style x/y/color/opacity/width/height [value]', playerName)
+      return true
+    end
+
+    if (args[2] == 'width' or args[2] == 'height') and args[3] == '-' then
+      args[3] = nil
+    elseif not tonumber(args[3]) then
+      sendModuleMessage('<r>Invalid value', playerName)
+      return true
+    end
+
+    onscreenRules.style[args[2]] = tonumber(args[3])
+    updateOnscreenRules()
+
+  else
+    sendModuleMessage('Manage rules: <BL>!rules add/remove/hide/show/style', playerName)
+    return true
+  end
 end
 
 commands.newtheme = function(playerName, args)
@@ -1553,6 +1663,7 @@ function eventNewPlayer(playerName)
 
   setMapName()
   updateThemeUI()
+  updateOnscreenRules(playerName)
 
   if mapWind and mapGravity then
     tfm.exec.setWorldGravity(mapWind, mapGravity)
@@ -1774,6 +1885,13 @@ function eventChatCommand(playerName, command)
     if not ret then
       announceAdmins(("<V>[%s] <BL>!%s"):format(playerName, command))
     end
+  end
+end
+
+function eventTextAreaCallback(textAreaId, playerName, eventName)
+  if textAreaId == 111 and eventName == 'rules' then
+    onscreenRules.hide[playerName] = not onscreenRules.hide[playerName]
+    updateOnscreenRules(playerName)
   end
 end
 
