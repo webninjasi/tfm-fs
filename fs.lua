@@ -85,10 +85,22 @@ local backgroundColor
 local roomPlayers = {}
 local bans = {}
 local participants = {}
+local participantsInRoom = {}
 local tpTarget = {}
 local holdingKey = {
   [16] = {}, -- shift
   [17] = {}, -- ctrl
+}
+local outfitTracker = {
+  enabled = false,
+  posX = 600, posY = 25,
+  view = {
+    _count = 0,
+  },
+  fields = {
+    'head', 'eyes', 'ears', 'mouth', 'neck', 'hair', 'tail',
+    'lens', 'hands', 'special1', 'special2', 'tattoo',
+  }
 }
 local callOnClick = {}
 local callOnColor = {}
@@ -548,6 +560,119 @@ local function showColorPicker(playerName, text, defaultColor, callback)
   ui.showColorPicker(444, playerName, defaultColor, text)
 end
 
+local function compareOutfits(look1, look2)
+  local fur1, parts1 = look1:match('^(.-);(.-)$')
+  local fur2, parts2 = look2:match('^(.-);(.-)$')
+  local diff = { _len=0 }
+
+  if fur1 ~= fur2 then
+    diff._len = 1 + diff._len
+    diff[diff._len] = 'fur ' .. fur1 .. '>' .. fur2
+  end
+
+  local items1, items2 = {}, {}
+  local colors1, colors2 = {}, {}
+  local index
+
+  index = 0
+  for part in parts1:gmatch('[^,]+') do
+    index = 1 + index
+    if part:find('_') then
+      items1[index], colors1[index] = part:match('^(.-)_(.-)$')
+    else
+      items1[index] = part
+    end
+  end
+
+  index = 0
+  for part in parts2:gmatch('[^,]+') do
+    index = 1 + index
+    if part:find('_') then
+      items2[index], colors2[index] = part:match('^(.-)_(.-)$')
+    else
+      items2[index] = part
+    end
+  end
+
+  for i=1, #outfitTracker.fields do
+    if items1[i] ~= items2[i] then
+      diff._len = 1 + diff._len
+      diff[diff._len] = outfitTracker.fields[i] .. ' ' .. tostring(items1[i]) .. '>' .. tostring(items2[i])
+    elseif colors1[i] ~= colors2[i] then
+      diff._len = 1 + diff._len
+      diff[diff._len] = outfitTracker.fields[i] .. ' color'
+    end
+  end
+
+  return table.concat(diff, ', ')
+end
+
+local function updateOutfitTrackerUI(playerName)
+  if playerName then
+    if outfitTracker.view[playerName] then
+      ui.addTextArea(
+        42,
+        outfitTracker.cache or 'Waiting..',
+        playerName,
+        outfitTracker.posX, outfitTracker.posY, 200, 375,
+        1, 1, 0.8, true
+      )
+    else
+      ui.removeTextArea(42, playerName)
+    end
+
+    return
+  end
+
+  if outfitTracker.delay and os.time() < outfitTracker.delay then
+    return
+  end
+  outfitTracker.delay = os.time() + 2000
+
+  local differences = { _len=0, _compare=0 }
+  local outfit, player
+  local lastPlayer
+
+  if outfitTracker.cache then
+    differences._compare = 1
+    differences._len = 1 + differences._len
+    differences[differences._len] = outfitTracker.cache
+    lastPlayer = outfitTracker.cache:match('<V>(.-)<BL>.-$')
+  end
+
+  for playerName in next, participantsInRoom do
+    player = tfm.get.room.playerList[playerName]
+    outfit = outfitTracker[playerName]
+
+    if outfit and outfit ~= player.look then
+      differences._len = 1 + differences._len
+      differences[differences._len] = compareOutfits(outfit, player.look)
+
+      if lastPlayer ~= playerName then
+        lastPlayer = playerName
+        differences[differences._len] = '<V>' .. playerName .. '<BL> ' .. differences[differences._len]
+      end
+    end
+
+    outfitTracker[playerName] = player.look
+  end
+
+  if differences._len ~= differences._compare then
+    local newCache = table.concat(differences, '\n')
+    local subIndex = math.max(1, #newCache - 1999)
+
+    if subIndex > 1 and newCache:sub(subIndex - 1, subIndex - 1) ~= '\n' then
+      subIndex = newCache:find('\n', subIndex) or subIndex
+    end
+
+    outfitTracker.cache = newCache:sub(subIndex)
+
+    for playerName in next, outfitTracker.view do
+      updateOutfitTrackerUI(playerName)
+    end
+  end
+end
+
 local commands = {}
 local commandAlias = {}
 local commandPerms = {}
@@ -723,6 +848,38 @@ commands.rst = function(playerName, args)
 end
 commandAlias.reset = commands.rst
 commandAlias.restart = commands.rst
+
+commands.track = function(playerName, args)
+  if args[1] == 'move' then
+    callOnClick[playerName] = function(playerName, x, y)
+      outfitTracker.posX, outfitTracker.posY = x, y
+
+      for name in next, outfitTracker.view do
+        updateOutfitTrackerUI(name)
+      end
+    end
+
+    return
+  end
+
+  outfitTracker.view[playerName] = not outfitTracker.view[playerName] or nil
+
+  if outfitTracker.view[playerName] then
+    outfitTracker.view._count = outfitTracker.view._count + 1
+
+    if outfitTracker.view._count == 1 then
+      outfitTracker.enabled = true
+    end
+  else
+    outfitTracker.view._count = outfitTracker.view._count - 1
+
+    if outfitTracker.view._count == 0 then
+      outfitTracker.enabled = false
+    end
+  end
+
+  updateOutfitTrackerUI(playerName)
+end
 
 commands.extratime = function(playerName, args)
   extraTimeSeconds = math.max(5, tonumber(args[1]) or 60)
@@ -1233,6 +1390,20 @@ local function setAdminLevel(playerName, level, compareLevel)
 
   if level == 0 then
     announceAdmins(('<V>%s <N2>is not an admin anymore.'):format(playerName))
+
+    callOnClick[playerName] = nil
+    callOnColor[playerName] = nil
+
+    if outfitTracker.view[playerName] then
+      outfitTracker.view[playerName] = nil
+      outfitTracker.view._count = outfitTracker.view._count - 1
+
+      if outfitTracker.view._count == 0 then
+        outfitTracker.enabled = false
+      end
+
+      updateOutfitTrackerUI(playerName)
+    end
   else
     if currentLevel > 0 then
       announceAdmins(('<V>%s <N2>is an admin now. [%s]'):format(playerName, level))
@@ -1647,6 +1818,7 @@ local function updateParticipant(playerName, status)
   end
 
   participants[playerName] = status
+  participantsInRoom[playerName] = status or nil
 
   if settings.auto_color then
     if status then
@@ -1882,6 +2054,10 @@ function eventLoop(elapsedTime, remainingTime)
     sendModuleMessage('<R>' .. timeupMessage, nil)
   end
 
+  if outfitTracker.enabled then
+    updateOutfitTrackerUI()
+  end
+
   if throwErrorOnLoop then
     local err = throwErrorOnLoop
     throwErrorOnLoop = nil
@@ -1910,6 +2086,10 @@ function eventNewPlayer(playerName)
     showNPC(targetName, npc, playerName)
   end
 
+  if participants[playerName] then
+    participantsInRoom[playerName] = true
+  end
+
   if admins[playerName] and settings.log_admin_joins then
     announceAdmins(('<N2>• <V>%s <N2>has joined the room.'):format(playerName))
   elseif participants[playerName] and settings.log_participant_joins then
@@ -1927,6 +2107,16 @@ function eventPlayerLeft(playerName)
   deathTime[playerName] = nil
   callOnClick[playerName] = nil
   callOnColor[playerName] = nil
+  participantsInRoom[playerName] = nil
+
+  if outfitTracker.view[playerName] then
+    outfitTracker.view[playerName] = nil
+    outfitTracker.view._count = outfitTracker.view._count - 1
+
+    if outfitTracker.view._count == 0 then
+      outfitTracker.enabled = false
+    end
+  end
 
   if admins[playerName] and settings.log_admin_joins then
     announceAdmins(('<N2>• <V>%s <N2>has left the room.'):format(playerName))
