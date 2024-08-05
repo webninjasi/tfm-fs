@@ -115,8 +115,8 @@ local isFrozen = {}
 local currentTheme
 local timeWarningMessage = 'There is less than 1 minute left...'
 local timeupMessage = 'Time is up!'
-local timeupMessageShown
-local lastMinuteWarningShown
+local timeupMessageShown = true
+local lastMinuteWarningShown = true
 local throwErrorOnLoop
 local onscreenRules = {
   _len=0,
