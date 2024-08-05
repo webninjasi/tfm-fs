@@ -129,6 +129,14 @@ local onscreenRules = {
     opacity = 0.8,
     width = false,
     height = false,
+    font = false,
+    size = false,
+  },
+  defaultsFalse = {
+    width = true,
+    height = true,
+    font = true,
+    size = true,
   }
 }
 
@@ -460,20 +468,24 @@ local function updateOnscreenRules(playerName, _text)
     return
   end
 
+  local style = onscreenRules.style
+
   if _text then
     return ui.addTextArea(
       111,
       _text,
       playerName,
-      onscreenRules.style.x, onscreenRules.style.y,
-      onscreenRules.style.width, onscreenRules.style.height,
-      onscreenRules.style.color, onscreenRules.style.color,
-      onscreenRules.style.opacity, false
+      style.x, style.y,
+      style.width, style.height,
+      style.color, style.color,
+      style.opacity, false
     )
   end
 
-  local header = ('<font color="#%.6x"><a href="event:rules"><b>RULES</b></a>'):format(
-    onscreenRules.style.textcolor
+  local header = ('<font color="#%.6x"%s%s><a href="event:rules"><b>RULES</b></a>'):format(
+    style.textcolor,
+    style.font and (' face="%s"'):format(style.font) or '',
+    style.size and (' size="%s"'):format(style.size) or ''
   )
 
   if playerName and onscreenRules.hide[playerName] then
@@ -1016,31 +1028,39 @@ commands.rules = function(playerName, args)
     end
 
   elseif args[1] == 'style' then
-    if args[2] == 'color' or args[2] == 'textcolor' then
+    local key = args[2]
+    if key == 'color' or key == 'textcolor' then
       if args[3] then
         args[3] = tonumber(args[3], 16)
       else
-        showColorPicker(playerName, "Pick a color for rules:", onscreenRules.style[args[2]], function(playerName, color)
-          onscreenRules.style[args[2]] = color
+        showColorPicker(playerName, "Pick a color for rules:", onscreenRules.style[key], function(playerName, color)
+          onscreenRules.style[key] = color
           updateOnscreenRules()
         end)
         return
       end
     end
 
-    if not args[2] or onscreenRules.style[args[2]] == nil or not args[3] then
-      sendModuleMessage('Change rules ui style or position: <BL>!rules style x/y/color/opacity/width/height [value]', playerName)
+    if not key or onscreenRules.style[key] == nil or not args[3] then
+      sendModuleMessage('Change rules ui style or position: <BL>!rules style x/y/color/opacity/width/height/font/size [value]', playerName)
       return true
     end
 
-    if (args[2] == 'width' or args[2] == 'height') and args[3] == '-' then
-      args[3] = nil
-    elseif not tonumber(args[3]) then
-      sendModuleMessage('<r>Invalid value', playerName)
-      return true
+    local value = tonumber(args[3]) or false
+
+    if key == 'font' then
+      value = table.concat(args, ' ', 3, #args)
+      value = value:gsub('[^a-zA-Z0-9%s]', '')
     end
 
-    onscreenRules.style[args[2]] = tonumber(args[3])
+    if not value then
+      if not onscreenRules.defaultsFalse[key] or args[3] ~= '-' then
+        sendModuleMessage('<r>Invalid value', playerName)
+        return true
+      end
+    end
+
+    onscreenRules.style[key] = value
     updateOnscreenRules()
 
   else
