@@ -121,6 +121,7 @@ local onscreenRules = {
   style = {
     x = 0, y = 30,
     color = 1,
+    textcolor = 0xffffff,
     opacity = 0.8,
     width = false,
     height = false,
@@ -453,11 +454,17 @@ local function updateOnscreenRules(playerName, _text)
       onscreenRules.style.color, onscreenRules.style.color,
       onscreenRules.style.opacity, false
     )
-  elseif playerName and onscreenRules.hide[playerName] then
-    return updateOnscreenRules(playerName, '<a href="event:rules"><b>RULES')
   end
 
-  local text = { '<a href="event:rules"><b>RULES</b></a>' }
+  local header = ('<font color="#%.6x"><a href="event:rules"><b>RULES</b></a>'):format(
+    onscreenRules.style.textcolor
+  )
+
+  if playerName and onscreenRules.hide[playerName] then
+    return updateOnscreenRules(playerName, header)
+  end
+
+  local text = { header }
   for i=1, onscreenRules._len do
     text[i + 1] = ('<b>%s.</b> %s'):format(i, onscreenRules[i])
   end
@@ -954,21 +961,21 @@ commands.rules = function(playerName, args)
     end
 
   elseif args[1] == 'style' then
-    if not args[2] or onscreenRules.style[args[2]] == nil or (not args[3] and args[2] ~= 'color') then
-      sendModuleMessage('Change rules ui style or position: <BL>!rules style x/y/color/opacity/width/height [value]', playerName)
-      return true
-    end
-
-    if args[2] == 'color' then
+    if args[2] == 'color' or args[2] == 'textcolor' then
       if args[3] then
         args[3] = tonumber(args[3], 16)
       else
-        showColorPicker(playerName, "Pick a background color for rules:", onscreenRules.style.color, function(playerName, color)
-          onscreenRules.style.color = color
+        showColorPicker(playerName, "Pick a color for rules:", onscreenRules.style[args[2]], function(playerName, color)
+          onscreenRules.style[args[2]] = color
           updateOnscreenRules()
         end)
         return
       end
+    end
+
+    if not args[2] or onscreenRules.style[args[2]] == nil or not args[3] then
+      sendModuleMessage('Change rules ui style or position: <BL>!rules style x/y/color/opacity/width/height [value]', playerName)
+      return true
     end
 
     if (args[2] == 'width' or args[2] == 'height') and args[3] == '-' then
