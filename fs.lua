@@ -2164,6 +2164,8 @@ for eventName, eventFunc in next, _G do
     _G[eventName] = function(...)
       ok, err = pcall(eventFunc, ...)
       if not ok then
+        print(eventName)
+        print(err)
         announceAdmins(("<BL>[#] <R>Module error on %s:\n<BL>%s\n<G>v%s"):format(eventName, tostring(err), VERSION))
       end
     end
