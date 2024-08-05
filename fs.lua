@@ -93,7 +93,6 @@ local callOnClick = {}
 local callOnColor = {}
 local canTeleport = {}
 local playerNPC = {}
-local playerNPCPos = {}
 local arrowEnabled = {}
 local arrowAllowTime = {}
 local spawnPosition = {}
@@ -858,23 +857,44 @@ local function removeNPC(playerName)
   end
 
   playerNPC[playerName] = nil
-  playerNPCPos[playerName] = nil
   tfm.exec.addNPC(playerName, {
     look = '-1;',
     x = -10000,
     y = -10000,
   })
 end
-local function createNPC(playerName, look, keepPos, visibleFor)
+local function showNPC(playerName, npc, visibleFor)
+  tfm.exec.addNPC(playerName, {
+    title = npc.title,
+    look = npc.look,
+    x = npc.x,
+    y = npc.y,
+    female = npc.female,
+    lookLeft = npc.lookLeft,
+    lookAtPlayer = npc.lookAtPlayer,
+  }, visibleFor)
+end
+local function moveNPC(playerName, x, y)
+  local npc = playerNPC[playerName]
+  if not npc then
+    return
+  end
+
+  npc.x, npc.y = x, y
+  showNPC(playerName, npc, nil)
+end
+local function createNPC(playerName, look, onlyUpdateLook, visibleFor)
   local player = tfm.get.room.playerList[playerName]
   if not player then
     return
   end
 
+  local npc = playerNPC[playerName]
+
   if not look or look:find(';') then
     look = look or player.look
   else
-    look = (playerNPC[playerName] or '') .. look
+    look = (npc and npc.look or '') .. look
   end
 
   if #look > 4096 then
@@ -882,28 +902,61 @@ local function createNPC(playerName, look, keepPos, visibleFor)
   end
 
   local death = isDead[playerName] and (deathPosition[playerName] or spawnPosition[playerName])
-  local pos = keepPos and playerNPCPos[playerName] or death or {
-    x = player.x,
-    y = player.y,
-  }
+  local female, lookLeft
 
-  if not visibleFor then
-    playerNPC[playerName] = look
-    playerNPCPos[playerName] = pos
+  if onlyUpdateLook and npc then
+    female, lookLeft = npc.female, npc.lookLeft
+  else
+    female, lookLeft = player.gender == 0, not player.isFacingRight
   end
 
-  tfm.exec.addNPC(playerName, {
-    title = player.title,
+  npc = {
+    title = onlyUpdateLook and npc and npc.title or player.title,
     look = look,
-    x = pos.x,
-    y = pos.y,
-    female = player.gender == 0,
-    lookLeft = not player.isFacingRight,
-    lookAtPlayer = true,
-  }, visibleFor)
+    x = onlyUpdateLook and npc and npc.x or death and death.x or player.x,
+    y = onlyUpdateLook and npc and npc.y or death and death.y or player.y,
+    female = female,
+    lookLeft = lookLeft,
+  }
+
+  if visibleFor then
+    removeNPC(playerName)
+  else
+    playerNPC[playerName] = npc
+  end
+
+  showNPC(playerName, npc, visibleFor)
 end
 commands.removenpc = function(playerName, args)
   multiTargetCall(args[1] or playerName, removeNPC)
+end
+local function moveNpcCallback(playerName, x, y)
+  if playerName == 'all' or playerName == '*' then
+    for playerName in next, playerNPC do
+      moveNPC(playerName, x, y)
+    end
+    return
+  end
+
+  multiTargetCall(playerName, moveNPC, x, y)
+end
+commands.movenpc = function(playerName, args)
+  local targetName = args[1] or playerName
+
+  if args[2] and args[3] then
+    local x, y = tonumber(args[2]), tonumber(args[3])
+    if not x or not y then
+      sendModuleMessage('Usage: <BL>!movenpc [Player#1234] ([x] [y])', playerName)
+      return
+    end
+
+    moveNpcCallback(targetName, x, y)
+    return
+  end
+
+  callOnClick[playerName] = function(playerName, x, y)
+    moveNpcCallback(targetName, x, y)
+  end
 end
 commands.createnpc = function(playerName, args)
   if not args[1] then
@@ -1852,8 +1905,8 @@ function eventNewPlayer(playerName)
 
   autoSpawnAndMove(playerName)
 
-  for targetName, look in next, playerNPC do
-    createNPC(targetName, look, true, playerName)
+  for targetName, npc in next, playerNPC do
+    showNPC(targetName, npc, playerName)
   end
 
   if admins[playerName] and settings.log_admin_joins then
