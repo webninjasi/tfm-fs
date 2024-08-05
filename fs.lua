@@ -34,6 +34,7 @@ local settings = {
   auto_shaman = false,
   allow_minimalist = false,
   allow_emotes = true,
+  allow_extra_time = true,
 }
 
 local mapCategories = {
@@ -101,6 +102,9 @@ local deathTime = {}
 local allowMortHotkeyTime = {}
 local playerColor = {}
 local isDead = {}
+local timeRequestTs = {}
+local currentTime = 0
+local extraTimeSeconds = 60
 local participantsColor = 0xffe249
 local participantOutColor = 0xCB546B
 local themeColor = 0xB2B42E
@@ -150,6 +154,18 @@ do
   end
 end
 
+local function updateGameTime(time, set)
+  time = tonumber(time) or 5
+  currentTime = set and time or (math.max(0, currentTime) + time)
+  currentTime = math.max(5, currentTime)
+
+  if currentTime > 60 then
+    lastMinuteWarningShown = false
+  end
+
+  timeupMessageShown = false
+  return tfm.exec.setGameTime(currentTime, true)
+end
 
 local function findLowerStrInArr(str, arr, start, last)
   if not str then
@@ -696,25 +712,60 @@ end
 commandAlias.reset = commands.rst
 commandAlias.restart = commands.rst
 
+commands.extratime = function(playerName, args)
+  extraTimeSeconds = math.max(5, tonumber(args[1]) or 60)
+end
+
 commands.time = function(playerName, args)
-  local time = args[1]
+  local time = args[1] and args[-1]
+
+  if not admins[playerName] then
+    if time or not settings.allow_extra_time or not participants[playerName] then
+      return true
+    end
+
+    if timeRequestTs[playerName] and os.time() < timeRequestTs[playerName] then
+      return true
+    end
+
+    if currentTime > extraTimeSeconds or currentTime < 1 then
+      return true
+    end
+
+    timeRequestTs[playerName] = os.time() + extraTimeSeconds * 1000 * 1.5
+  end
+
   if not time then
-    sendModuleMessage('Usage: <BL>!time [seconds]', playerName)
+    updateGameTime(extraTimeSeconds, false)
+    sendModuleMessage(
+      ('<V>%s</V> added <G>%s</G> seconds to the game.'):format(
+        playerName,
+        extraTimeSeconds
+      ),
+      nil
+    )
     return true
   end
 
-  if time then
-    local minutes = tonumber(time:lower():match('^(%d+)m$'))
-    time = minutes and (minutes * 60) or tonumber(time)
+  local relative = time:sub(1, 1)
+  relative = (relative == '+' and 1) or (relative == '-' and -1)
+
+  if relative then
+    time = time:sub(2)
   end
 
-  if time > 60 then
-    lastMinuteWarningShown = false
+  local minutes, unit = time:lower():match('^%s*(%d+)%s*(%a+)$')
+  minutes = unit and ('minutes'):find(unit) == 1 and tonumber(minutes)
+  time = minutes and (minutes * 60) or tonumber(time)
+
+  if not time then
+    sendModuleMessage('Usage: <BL>!time (+/-)[seconds/minutes](m)', playerName)
+    return true
   end
 
-  timeupMessageShown = false
-  tfm.exec.setGameTime(time, true)
+  updateGameTime(time * (relative or 1), not relative)
 end
+commandPerms[commands.time] = 0
 
 commands.size = function(playerName, args)
   local size, target = getNumberAndString(args[2], args[1])
@@ -1501,6 +1552,10 @@ local function updateParticipant(playerName, status)
     if settings.allow_npc then
       sendModuleMessage('You can type <BL>!npc [/dressing code here] <N>to create an NPC wearing a fit you created in /dressing or in external dress room tools.', playerName)
     end
+
+    if settings.allow_extra_time then
+      sendModuleMessage('If you need to ask for more time just type <BL>!time', playerName)
+    end
   elseif status == false then
     if participants[playerName] then
       sendModuleMessage('<V>' .. playerName .. ' <N>has been removed from the show.', nil)
@@ -1670,8 +1725,8 @@ function eventNewGame()
   timeupMessageShown = false
   lastMinuteWarningShown = false
   playerNPC = {}
-  playerNPCPos = {}
   isDead = {}
+  lastTimeRequest = {}
 
   local code = tfm.get.room.currentMap
   if mapInfo.code ~= code then
@@ -1728,10 +1783,12 @@ function eventNewGame()
   end
 
   setMapName()
-  tfm.exec.setGameTime(60 * 60)
+  updateGameTime(60 * 60, true)
 end
 
 function eventLoop(elapsedTime, remainingTime)
+  currentTime = remainingTime / 1000
+
   if loadMapCode then
     tfm.exec.newGame(loadMapCode, loadMapReversed)
   end
