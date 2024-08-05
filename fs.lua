@@ -1036,8 +1036,9 @@ commands.rules = function(playerName, args)
         showColorPicker(playerName, "Pick a color for rules:", onscreenRules.style[key], function(playerName, color)
           onscreenRules.style[key] = color
           updateOnscreenRules()
+          announceAdmins(("<V>[%s] <BL>!rules style %s %.6x"):format(playerName, key, color))
         end)
-        return
+        return true
       end
     end
 
@@ -1090,8 +1091,9 @@ commands.themecolor = function(playerName, args)
     showColorPicker(playerName, "Pick a theme color:", themeColor, function(playerName, color)
       themeColor = color
       updateThemeUI()
+      announceAdmins(("<V>[%s] <BL>!themecolor %.6x"):format(playerName, color))
     end)
-    return
+    return true
   end
 
   local color = tonumber(args[1], 16) or 0xB2B42E
@@ -1529,7 +1531,7 @@ commands.settings = function(playerName, args)
   local key = args[1]
   if not key then
     updateSettingsUI(playerName)
-    return
+    return true
   end
 
   if settings[key] == nil then
@@ -1733,8 +1735,9 @@ commands.bgcolor = function(playerName, args)
     showColorPicker(playerName, "Pick a background color:", backgroundColor or 0, function(playerName, color)
       backgroundColor = ('#%.6x'):format(color)
       ui.setBackgroundColor(backgroundColor)
+      announceAdmins(("<V>[%s] <BL>!bgcolor %.6x"):format(playerName, color))
     end)
-    return
+    return true
   end
 
   backgroundColor = args[1] ~= '-' and args[1] ~= 'none' and ("#" .. args[1]) or nil
@@ -2093,7 +2096,10 @@ function eventTextAreaCallback(textAreaId, playerName, eventName)
       return
     end
 
-    settings[eventName] = not settings[eventName]
+    eventChatCommand(playerName, ("settings %s %s"):format(
+      eventName,
+      settings[eventName] and 'no' or 'yes'
+    ))
     updateSettingsUI(playerName)
   end
 end
