@@ -33,6 +33,7 @@ local settings = {
   log_participant_joins = false,
   auto_shaman = false,
   allow_minimalist = false,
+  allow_emotes = true,
 }
 
 local mapCategories = {
@@ -1865,6 +1866,14 @@ function eventColorPicked(colorPickerId, playerName, color)
       callOnColor[playerName] = nil
     end
   end
+end
+
+function eventEmotePlayed(playerName, emoteType, emoteParam)
+  if settings.allow_emotes or emoteType == 9 then
+    return
+  end
+
+  tfm.exec.playEmote(playerName, 9, nil)
 end
 
 function eventKeyboard(playerName, keyCode, down, x, y)
