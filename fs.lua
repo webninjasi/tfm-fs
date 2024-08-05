@@ -972,8 +972,12 @@ commands.rules = function(playerName, args)
       return true
     end
 
+    local text = table.concat(args, ' ', 2, #args)
+    text = text:gsub('%*%*(.-)%*%*', '<b>%1</b>')
+    text = text:gsub('%*(.-)%*', '<i>%1</i>')
+    text = text:gsub('__(.-)__', '<u>%1</u>')
     onscreenRules._len = 1 + onscreenRules._len
-    onscreenRules[onscreenRules._len] = table.concat(args, ' ', 2, #args)
+    onscreenRules[onscreenRules._len] = text
     updateOnscreenRules()
 
   elseif args[1] == 'remove' then
