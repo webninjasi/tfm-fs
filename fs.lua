@@ -1,4 +1,4 @@
-local VERSION = "1.100"
+local VERSION = "1.101"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local DEFAULT_ADMINS = {
   ["Mckeydown#0000"] = 10,
@@ -17,6 +17,7 @@ local maps = {
 }
 
 local settings = {
+  allow_outfit_cmd = false,
   throwables = false,
   auto_respawn = true,
   timeup_msg = true,
@@ -1863,6 +1864,19 @@ commands.kick = function(playerName, args)
   tfm.exec.kickPlayer(target)
 end
 commandPerms[commands.kick] = 6
+
+commands.outfit = function(playerName, args)
+  if not settings.allow_outfit_cmd and not admins[playerName] then
+    sendModuleMessage('<R>This command is not allowed here.', playerName)
+    return true
+  end
+
+  local target = playerName
+  local look = args[-1]
+
+  tfm.exec.setPlayerLook(target, look)
+end
+commandPerms[commands.outfit] = 0
 
 commands.spec = function(playerName, args)
   multiTargetCall(args[1] or playerName, banPlayer, true)
