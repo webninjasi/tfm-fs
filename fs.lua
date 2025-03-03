@@ -37,7 +37,7 @@ local settings = {
   auto_shaman = false,
   allow_minimalist = false,
   allow_emotes = true,
-  allow_extra_time = true,
+  allow_extra_time = false,
 }
 
 local mapCategories = {
