@@ -1,4 +1,4 @@
-local VERSION = "1.99"
+local VERSION = "1.100"
 local MODULE_ROOM = "*#mckeydown fs %s"
 local DEFAULT_ADMINS = {
   ["Mckeydown#0000"] = 10,
@@ -1842,6 +1842,27 @@ local function banPlayer(targetName, yes)
     autoSpawnAndMove(targetName)
   end
 end
+
+commands.kick = function(playerName, args)
+  local target = args[1]
+  if not target then
+    sendModuleMessage('Usage: <BL>!kick [player]', playerName)
+    return true
+  end
+
+  if not roomPlayers[target] then
+    sendModuleMessage('<R>Player is not in the room.', playerName)
+    return true
+  end
+
+  if DEFAULT_ADMINS[target] or admins[target] then
+    sendModuleMessage('<R>Cannot kick an admin.', playerName)
+    return
+  end
+
+  tfm.exec.kickPlayer(target)
+end
+commandPerms[commands.kick] = 6
 
 commands.spec = function(playerName, args)
   multiTargetCall(args[1] or playerName, banPlayer, true)
